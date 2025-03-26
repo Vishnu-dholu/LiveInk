@@ -30,7 +30,7 @@ io.on("connection", (socket) => {
 
         // Save drawing to the database
         try {
-            await pool.query("INSERT INTO drawings (data) VALUES ($1)", [JSON.stringify(drawingData)])
+            await pool.query("INSERT INTO drawings (drawing_data) VALUES ($1)", [JSON.stringify(drawingData)])
         } catch (error) {
             console.error("Error saving drawing:", error);
         }

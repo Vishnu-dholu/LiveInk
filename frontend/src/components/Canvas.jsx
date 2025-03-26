@@ -18,6 +18,8 @@ const Canvas = () => {
   // Reference to the Konva stage
   const stageRef = useRef(null);
 
+  /* ----------functions------------ */
+
   // Handle mouse/touch down event (start drawing)
   const handleMouseDown = (event) => {
     setIsDrawing(true);
@@ -67,7 +69,7 @@ const Canvas = () => {
 
   // Redo action
   const handleRedo = () => {
-    if (history.length === 0) return;
+    // if (history.length === 0) return;
 
     // Get the last state from redoHistory
     const nextState = redoHistory[redoHistory.length - 1];
@@ -78,6 +80,13 @@ const Canvas = () => {
     setLines(nextState);
     // Remove the last state from redoHistory
     setRedoHistory(redoHistory.slice(0, 1));
+  };
+
+  // Clear action
+  const handleClear = () => {
+    setLines([]);
+    setHistory([]);
+    setRedoHistory([]);
   };
 
   // Listen for real-time drawing updates
@@ -105,7 +114,7 @@ const Canvas = () => {
           Redo
         </button>
       </div> */}
-      <Toolbar onUndo={handleUndo} onRedo={handleRedo} />
+      <Toolbar onUndo={handleUndo} onRedo={handleRedo} onClear={handleClear} />
       <Stage
         width={window.innerWidth - 200}
         height={window.innerHeight - 200}
