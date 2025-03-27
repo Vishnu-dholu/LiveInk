@@ -87,7 +87,7 @@ const Canvas = () => {
     setLines(nextState); // Restore redo state
     setRedoHistory((prevRedo) => prevRedo.slice(0, -1)); // Remove last redo entry
 
-    socket.emit("redo");
+    socket.emit("redo", nextState);
   };
 
   // Clear action
@@ -112,6 +112,7 @@ const Canvas = () => {
     });
 
     socket.on("redo", (nextState) => {
+      console.log("Redo received from server:", nextState);
       if (nextState && Array.isArray(nextState)) {
         setLines(nextState);
         setHistory((prevHistory) => [...prevHistory, nextState]);

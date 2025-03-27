@@ -18,11 +18,13 @@ app.use(cors())
 app.use(express.json())
 
 // Store redo history
-let redoStack = [];
+const userRedoStacks = new Map();
 
 //  WebSocket connection handling
 io.on("connection", (socket) => {
     console.log(`A user connected: ${socket.id}`)
+
+    userRedoStacks.set(socket.id, []);
 
     /**
      * Event Listener: Listens for "draw" events from a connected client.
@@ -40,14 +42,24 @@ io.on("connection", (socket) => {
     })
 
     socket.on("undo", async (previousState) => {
+        const redoStack = userRedoStacks.get(socket.id)
+        if (!redoStack) {
+            console.log(`Redo stack not found for user: ${socket.id}`)
+            return
+        }
         redoStack.push(previousState)
         io.emit("undo", previousState)
     });
 
     socket.on("redo", async () => {
-        if (redoStack.length === 0) return
+        const redoStack = userRedoStacks.get(socket.id)
+        if (!redoStack || redoStack.length === 0) {
+            console.log("Redo stack is empty.")
+            return
+        }
 
         const nextState = redoStack.pop()
+
         io.emit("redo", nextState)
     })
 
@@ -65,6 +77,7 @@ io.on("connection", (socket) => {
     // Event Listener: Triggered when a user disconnects from the server
     socket.on("disconnect", () => {
         console.log(`User disconnected: ${socket.id}`)
+        userRedoStacks.delete(socket.id)
     })
 })
 // }) Start the Express server on port 5000
