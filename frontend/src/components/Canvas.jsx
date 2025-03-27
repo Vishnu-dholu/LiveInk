@@ -8,11 +8,11 @@ const socket = io("http://localhost:5000");
 
 const Canvas = () => {
   // Stores drawn lines
-  const [lines, setLines] = useState([]);
+  const [lines, setLines] = useState(() => []);
   // Stack for undo
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState(() => []);
   // Stack for redo
-  const [redoHistory, setRedoHistory] = useState([]);
+  const [redoHistory, setRedoHistory] = useState(() => []);
   // Track whether user is currently drawing
   const [isDrawing, setIsDrawing] = useState(false);
   // Reference to the Konva stage
@@ -24,13 +24,16 @@ const Canvas = () => {
   const handleMouseDown = (event) => {
     setIsDrawing(true);
     const pos = event.target.getStage().getPointerPosition();
-    setLines([
-      ...lines,
-      { points: [pos.x, pos.y], stroke: "black", strokeWidth: 3 },
-    ]);
 
-    // Save current state in history for undo
-    setHistory([...history, lines]);
+    // Save current state before modifying it
+    setHistory((prevHistory) => [...prevHistory, [...lines]]);
+    setRedoHistory([]); // Clear redo when drawing a new line
+
+    const newLine = { points: [pos.x, pos.y], stroke: "black", strokeWidth: 3 };
+    setLines((prevLines) => [...prevLines, newLine]);
+
+    // Emit drawing to server immediately
+    socket.emit("draw", newLine);
   };
 
   // Handle mouse/touch move event (draw line)
@@ -39,12 +42,19 @@ const Canvas = () => {
     const stage = event.target.getStage();
     const point = stage.getPointerPosition();
 
-    // Update the last line with new points
-    let lastline = lines[lines.length - 1];
-    lastline.points = [...lastline.points, point.x, point.y];
+    setLines((prevLines) => {
+      if (prevLines.length === 0) return prevLines;
 
-    setLines([...lines.slice(0, -1), lastline]);
-    socket.emit("draw", lines);
+      const updatedLines = [...prevLines];
+      const lastLine = updatedLines[updatedLines.length - 1];
+
+      // Update the last line with new points
+      lastLine.points = [...lastLine.points, point.x, point.y];
+
+      socket.emit("draw", lastLine);
+
+      return updatedLines;
+    });
   };
 
   // Handle mouse/touch up event (stop drawing)
@@ -54,32 +64,30 @@ const Canvas = () => {
 
   // Undo action
   const handleUndo = () => {
-    if (history.length === 0) return;
+    if (history.length === 0) return; // Prevent errors
 
-    // Get the last state from history
+    // Get the last saved state
     const previousState = history[history.length - 1];
 
-    // Store the current state in redoHistory for redo
-    setRedoHistory([...redoHistory, lines]);
-    // Restore the previous state
-    setLines(previousState);
-    // Remove the last state from history
-    setHistory(history.slice(0, -1));
+    setRedoHistory((prevRedo) => [...prevRedo, lines]); // Save current state in redo
+    setLines(previousState); // Restore previous state
+    setHistory((prevHistory) => prevHistory.slice(0, -1)); // Remove last history entry
+
+    socket.emit("undo", previousState);
   };
 
   // Redo action
   const handleRedo = () => {
-    // if (history.length === 0) return;
+    if (redoHistory.length === 0) return; // No redo possible
 
-    // Get the last state from redoHistory
+    // Get the last redo state
     const nextState = redoHistory[redoHistory.length - 1];
 
-    // Store the current state in history for undo
-    setHistory([...history, lines]);
-    // Restore the next state
-    setLines(nextState);
-    // Remove the last state from redoHistory
-    setRedoHistory(redoHistory.slice(0, 1));
+    setHistory((prevHistory) => [...prevHistory, lines]); // Save current state in history
+    setLines(nextState); // Restore redo state
+    setRedoHistory((prevRedo) => prevRedo.slice(0, -1)); // Remove last redo entry
+
+    socket.emit("redo");
   };
 
   // Clear action
@@ -87,33 +95,45 @@ const Canvas = () => {
     setLines([]);
     setHistory([]);
     setRedoHistory([]);
+
+    socket.emit("clear");
   };
 
   // Listen for real-time drawing updates
   useEffect(() => {
-    socket.on("draw", (data) => {
-      setLines(data);
+    socket.on("draw", (newLine) => {
+      setLines((prevLines) => [...prevLines, newLine]);
     });
 
-    return () => socket.off("draw");
+    socket.on("undo", (previousState) => {
+      if (previousState && Array.isArray(previousState)) {
+        setLines(previousState);
+      }
+    });
+
+    socket.on("redo", (nextState) => {
+      if (nextState && Array.isArray(nextState)) {
+        setLines(nextState);
+        setHistory((prevHistory) => [...prevHistory, nextState]);
+      }
+    });
+
+    socket.on("clear", () => {
+      setLines([]);
+      setHistory([]);
+      setRedoHistory([]);
+    });
+
+    return () => {
+      socket.off("draw");
+      socket.off("undo");
+      socket.off("redo");
+      socket.off("clear");
+    };
   }, []);
 
   return (
     <div className="flex flex-col items-center">
-      {/* <div className="flex gap-4 p-4">
-        <button
-          onClick={handleUndo}
-          className="px-4 py-2 bg-blue-500 text-white rounded"
-        >
-          Undo
-        </button>
-        <button
-          onClick={handleRedo}
-          className="px-4 py-2 bg-green-500 text-white rounded"
-        >
-          Redo
-        </button>
-      </div> */}
       <Toolbar onUndo={handleUndo} onRedo={handleRedo} onClear={handleClear} />
       <Stage
         width={window.innerWidth - 200}

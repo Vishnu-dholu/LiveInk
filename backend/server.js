@@ -17,6 +17,9 @@ const io = new Server(server, {
 app.use(cors())
 app.use(express.json())
 
+// Store redo history
+let redoStack = [];
+
 //  WebSocket connection handling
 io.on("connection", (socket) => {
     console.log(`A user connected: ${socket.id}`)
@@ -25,14 +28,37 @@ io.on("connection", (socket) => {
      * Event Listener: Listens for "draw" events from a connected client.
      * Broadcasts the drawing data to all other connected users.
      */
-    socket.on("draw", async (drawingData) => {
-        socket.broadcast.emit("draw", drawingData) //  Send the received drawing data to all other clients
+    socket.on("draw", async (newLine) => {
+        socket.broadcast.emit("draw", newLine) //  Send the received drawing data to all other clients
 
         // Save drawing to the database
         try {
-            await pool.query("INSERT INTO drawings (drawing_data) VALUES ($1)", [JSON.stringify(drawingData)])
+            await pool.query("INSERT INTO drawings (drawing_data) VALUES ($1)", [JSON.stringify(newLine)])
         } catch (error) {
             console.error("Error saving drawing:", error);
+        }
+    })
+
+    socket.on("undo", async (previousState) => {
+        redoStack.push(previousState)
+        io.emit("undo", previousState)
+    });
+
+    socket.on("redo", async () => {
+        if (redoStack.length === 0) return
+
+        const nextState = redoStack.pop()
+        io.emit("redo", nextState)
+    })
+
+    socket.on("clear", async () => {
+        redoStack = []
+        io.emit("clear")
+
+        try {
+            await pool.query("DELETE FROM drawings")
+        } catch (error) {
+            console.error("Error clearing drawings:", error);
         }
     })
 
