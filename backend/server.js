@@ -41,17 +41,18 @@ io.on("connection", (socket) => {
         }
     })
 
-    socket.on("undo", async (previousState) => {
+    socket.on("undo", (previousState, data) => {
         const redoStack = userRedoStacks.get(socket.id)
         if (!redoStack) {
             console.log(`Redo stack not found for user: ${socket.id}`)
             return
         }
         redoStack.push(previousState)
+        socket.broadcast.emit("undo", data);
         io.emit("undo", previousState)
     });
 
-    socket.on("redo", async () => {
+    socket.on("redo", (data) => {
         const redoStack = userRedoStacks.get(socket.id)
         if (!redoStack || redoStack.length === 0) {
             console.log("Redo stack is empty.")
@@ -59,7 +60,7 @@ io.on("connection", (socket) => {
         }
 
         const nextState = redoStack.pop()
-
+        socket.broadcast.emit("redp", data);
         io.emit("redo", nextState)
     })
 
