@@ -60,7 +60,7 @@ io.on("connection", (socket) => {
         }
 
         const nextState = redoStack.pop()
-        socket.broadcast.emit("redp", data);
+        socket.broadcast.emit("redo", data);
         io.emit("redo", nextState)
     })
 
