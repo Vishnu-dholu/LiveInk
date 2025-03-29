@@ -1,15 +1,18 @@
 # Real-Time Drawing App
 
 ## Overview
+
 This is a real-time collaborative drawing application built using **React (Vite) + Konva.js** for the frontend and **Express.js + WebSockets + PostgreSQL** for the backend. The app allows users to draw, use different tools, and collaborate in real time.
 
 ## Tech Stack
+
 - **Frontend**: React (Vite), Konva.js, Tailwind CSS
 - **Backend**: Express.js, WebSockets (Socket.IO), PostgreSQL
 - **Database**: PostgreSQL
 - **Deployment**: Docker, Docker Compose
 
 ## Project Structure
+
 ```
 /real-time-drawing-app
 ├── /backend # Backend (Express.js + PostgreSQL + WebSockets)
@@ -50,20 +53,26 @@ This is a real-time collaborative drawing application built using **React (Vite)
 ```
 
 ## Getting Started
+
 ### Prerequisites
+
 - Node.js
 - Docker & Docker Compose
 - PostgreSQL
 
 ### Installation & Running Locally
+
 #### 1️⃣ Clone the repository:
+
 ```bash
 git clone https://github.com/your-username/real-time-drawing-app.git
 cd real-time-drawing-app
 ```
 
 #### 2️⃣ Set up environment variables
+
 Create a `.env` file inside the `backend/` directory with the following:
+
 ```env
 DB_HOST=localhost
 DB_USER=your_username
@@ -73,11 +82,13 @@ JWT_SECRET=your_secret_key
 ```
 
 #### 3️⃣ Start the backend & database using Docker
+
 ```bash
 docker-compose up --build
 ```
 
 #### 4️⃣ Start the frontend
+
 ```bash
 cd frontend
 npm install
@@ -85,13 +96,10 @@ npm run dev
 ```
 
 ### Features
+
 - 🎨 **Real-time drawing** using WebSockets
 - 🖌️ **Multiple tools** (brush, shapes, eraser)
 - 🔄 **Undo & Redo functionality**
 - 🎨 **Color & brush size selection**
 - 🗃️ **Save & load drawings** from PostgreSQL
 - 👥 **Collaborative drawing rooms** (Upcoming)
-
-## License
-This project is licensed under the MIT License.
-
