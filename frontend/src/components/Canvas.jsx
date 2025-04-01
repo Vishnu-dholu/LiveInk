@@ -90,29 +90,31 @@ const Canvas = () => {
   }, [dispatch]);
 
   return (
-    <div>
+    <div className="flex flex-col items-center justify-center h-full w-full bg-gray-200 dark:bg-gray-900 rounded-2xl p-4 overflow-hidden">
       <Toolbar onUndo={handleUndo} onRedo={handleRedo} onClear={handleClear} />
-      <Stage
-        width={window.innerWidth - 100}
-        height={window.innerHeight - 100}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-      >
-        <Layer>
-          {lines.map((line, index) => (
-            <Line
-              key={index}
-              points={line.points}
-              stroke="black"
-              strokeWidth={2}
-            />
-          ))}
-          {currentLine.length > 0 && (
-            <Line points={currentLine} stroke="black" strokeWidth={2} />
-          )}
-        </Layer>
-      </Stage>
+      <div className="w-full max-w-6xl max-h-[80vh] shadow-lg rounded-xl border bg-gray-100 dark:bg-gray-500 border-gray-300 dark:border-gray-700 overflow-hidden">
+        <Stage
+          width={window.innerWidth - 100}
+          height={600}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+        >
+          <Layer>
+            {lines.map((line, index) => (
+              <Line
+                key={index}
+                points={line.points}
+                stroke="black"
+                strokeWidth={2}
+              />
+            ))}
+            {currentLine.length > 0 && (
+              <Line points={currentLine} stroke="black" strokeWidth={2} />
+            )}
+          </Layer>
+        </Stage>
+      </div>
     </div>
   );
 };

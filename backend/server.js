@@ -34,11 +34,11 @@ io.on("connection", (socket) => {
         socket.broadcast.emit("draw", newLine) //  Send the received drawing data to all other clients
 
         // Save drawing to the database
-        try {
-            await pool.query("INSERT INTO drawings (drawing_data) VALUES ($1)", [JSON.stringify(newLine)])
-        } catch (error) {
-            console.error("Error saving drawing:", error);
-        }
+        // try {
+        //     await pool.query("INSERT INTO drawings (drawing_data) VALUES ($1)", [JSON.stringify(newLine)])
+        // } catch (error) {
+        //     console.error("Error saving drawing:", error);
+        // }
     })
 
     socket.on("undo", (previousState, data) => {
