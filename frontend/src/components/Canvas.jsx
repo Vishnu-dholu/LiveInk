@@ -10,6 +10,7 @@ import {
 } from "../store/drawingSlice";
 import io from "socket.io-client";
 import Toolbar from "./Toolbar"; // Import Toolbar component
+import Toolbox from "./Toolbox";
 
 const socket = io("http://localhost:5000");
 
@@ -18,6 +19,13 @@ const Canvas = () => {
   const lines = useSelector((state) => state.drawing.lines);
   const currentLine = useSelector((state) => state.drawing.currentLine);
   const redoHistory = useSelector((state) => state.drawing.redoHistory);
+  const [canvasWidth, setCanvasWidth] = useState(window.innerWidth - 200);
+
+  useEffect(() => {
+    const updateSize = () => setCanvasWidth(window.innerWidth - 200);
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
 
   const handleMouseDown = (e) => {
     const pos = e.target.getStage().getPointerPosition();
@@ -90,30 +98,39 @@ const Canvas = () => {
   }, [dispatch]);
 
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full bg-gray-200 dark:bg-gray-900 rounded-2xl p-4 overflow-hidden">
-      <Toolbar onUndo={handleUndo} onRedo={handleRedo} onClear={handleClear} />
-      <div className="w-full max-w-6xl max-h-[80vh] shadow-lg rounded-xl border bg-gray-100 dark:bg-gray-500 border-gray-300 dark:border-gray-700 overflow-hidden">
-        <Stage
-          width={window.innerWidth - 100}
-          height={600}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-        >
-          <Layer>
-            {lines.map((line, index) => (
-              <Line
-                key={index}
-                points={line.points}
-                stroke="black"
-                strokeWidth={2}
-              />
-            ))}
-            {currentLine.length > 0 && (
-              <Line points={currentLine} stroke="black" strokeWidth={2} />
-            )}
-          </Layer>
-        </Stage>
+    <div className="flex flex-col md:flex-row items-center md:items-start justify-center h-full w-full bg-gray-200 dark:bg-gray-900 rounded-2xl p-4">
+      <div className="md:w-20 w-full md:h-auto flex md:flex-col justify-center md:justify-start">
+        <Toolbox />
+      </div>
+      <div className="flex flex-col items-center flex-1">
+        <Toolbar
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          onClear={handleClear}
+        />
+        <div className="w-full max-w-6xl max-h-[80vh] shadow-lg rounded-xl border bg-gray-100 dark:bg-gray-500 border-gray-300 dark:border-gray-700 overflow-hidden">
+          <Stage
+            width={window.innerWidth - 100}
+            height={600}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+          >
+            <Layer>
+              {lines.map((line, index) => (
+                <Line
+                  key={index}
+                  points={line.points}
+                  stroke="black"
+                  strokeWidth={2}
+                />
+              ))}
+              {currentLine.length > 0 && (
+                <Line points={currentLine} stroke="black" strokeWidth={2} />
+              )}
+            </Layer>
+          </Stage>
+        </div>
       </div>
     </div>
   );
