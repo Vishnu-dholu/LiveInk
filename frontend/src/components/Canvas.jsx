@@ -8,6 +8,7 @@ import {
   clearCanvas,
   redoAction,
   undoAction,
+  removeLineAt,
 } from "../store/drawingSlice";
 import io from "socket.io-client";
 import Toolbar from "./Toolbar";
@@ -23,7 +24,7 @@ const Canvas = () => {
   const redoHistory = useSelector((state) => state.drawing.redoHistory);
   const shapes = useSelector((state) => state.drawing.shapes); // Get shapes from Redux
 
-  const [canvasWidth, setCanvasWidth] = useState(window.innerWidth - 200);
+  const [canvasWidth, setCanvasWidth] = useState(window.innerWidth - 100);
   const [canvasHeight, setCanvasHeight] = useState(window.innerHeight - 100);
   const [isToolboxVisible, setIsToolboxVisible] = useState(false);
   const [selectedTool, setSelectedTool] = useState("pencil");
@@ -47,6 +48,9 @@ const Canvas = () => {
     } else if (selectedTool === "square" || selectedTool === "rectangle") {
       // Start drawing a shape
       setCurrentShape({ x: pos.x, y: pos.y, width: 0, height: 0 });
+    } else if (selectedTool === "eraser") {
+      dispatch(removeLineAt({ x: pos.x, y: pos.y }));
+      socket.emit("erase", { x: pos.x, y: pos.y });
     }
   };
 
@@ -73,8 +77,9 @@ const Canvas = () => {
         width: pos.x - currentShape.x,
         height: pos.y - currentShape.y,
       });
-    } else if (selectedTool === "eraser" && currentShape) {
-      dispatch(removeLineAt(pos));
+    } else if (selectedTool === "eraser") {
+      dispatch(removeLineAt({ x: pos.x, y: pos.y }));
+      socket.emit("erase", { x: pos.x, y: pos.y });
     } else if (currentLine.length > 0) {
       dispatch(updateCurrentLine([...currentLine, pos.x, pos.y]));
     }
@@ -148,12 +153,18 @@ const Canvas = () => {
       dispatch(clearCanvas());
     });
 
+    socket.on("erase", (pos) => {
+      console.log("Received Erase at:", pos);
+      dispatch(removeLineAt(pos));
+    });
+
     return () => {
       socket.off("draw");
       socket.off("drawShape");
       socket.off("undo");
       socket.off("redo");
       socket.off("clear");
+      socket.off("erase");
     };
   }, [dispatch]);
 
@@ -173,7 +184,7 @@ const Canvas = () => {
           isToolboxVisible ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 md:flex md:flex-col md:items-center`}
       >
-        <Toolbox onSelectTool={handleSelectTool} />
+        <Toolbox onSelectTool={handleSelectTool} activeTool={selectedTool} />
       </div>
 
       <div className="flex flex-col items-center flex-1 w-full max-w-screen-xl px-4">
