@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Stage, Layer, Line, Rect } from "react-konva"; // Import Konva components
+import { Stage, Layer, Line, Rect } from "react-konva";
 import {
   addLine,
   drawShape,
@@ -10,7 +10,7 @@ import {
   undoAction,
 } from "../store/drawingSlice";
 import io from "socket.io-client";
-import Toolbar from "./Toolbar"; // Import Toolbar component
+import Toolbar from "./Toolbar";
 import Toolbox from "./Toolbox";
 import { Menu } from "lucide-react";
 
@@ -83,7 +83,13 @@ const Canvas = () => {
   const handleMouseUp = () => {
     if (selectedTool === "pen" || selectedTool === "pencil") {
       if (currentLine.length > 0) {
-        const newLine = { points: [...currentLine], tool: selectedTool };
+        const newLine = {
+          points: [...currentLine],
+          tool: selectedTool,
+          stroke: selectedTool === "pen" ? "black" : "#353839",
+          strokeWidth: selectedTool === "pen" ? 3 : 1.8,
+          opacity: selectedTool === "pen" ? 1 : 0.6,
+        };
         dispatch(addLine(newLine));
         socket.emit("draw", newLine);
         dispatch(updateCurrentLine([])); // Reset for next stroke
@@ -176,7 +182,7 @@ const Canvas = () => {
           onRedo={handleRedo}
           onClear={handleClear}
         />
-        <div className="w-full max-w-6xl max-h-[80vh] shadow-lg rounded-xl border bg-gray-100 dark:bg-gray-500 border-gray-300 dark:border-gray-700 overflow-hidden">
+        <div className="w-full max-w-6xl max-h-[80vh] shadow-lg rounded-xl border bg-gray-100 dark:bg-gray-400 border-gray-300 dark:border-gray-700 overflow-hidden">
           <Stage
             width={canvasWidth}
             height={canvasHeight}
@@ -189,9 +195,10 @@ const Canvas = () => {
                 <Line
                   key={index}
                   points={line.points}
-                  stroke="black"
-                  strokeWidth={2}
-                  tension={0.5}
+                  stroke={line.stroke}
+                  strokeWidth={line.strokeWidth}
+                  tension={line.tool === "pen" ? 0.5 : 0.2}
+                  dash={line.tool === "pencil" ? [5, 5] : []}
                   lineCap="round"
                   lineJoin="round"
                 />
