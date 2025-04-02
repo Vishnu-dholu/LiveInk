@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Stage, Layer, Line } from "react-konva"; // Import Konva components
+import { Stage, Layer, Line, Rect } from "react-konva"; // Import Konva components
 import {
   addLine,
+  drawShape,
   updateCurrentLine,
   clearCanvas,
   redoAction,
@@ -20,9 +21,14 @@ const Canvas = () => {
   const lines = useSelector((state) => state.drawing.lines);
   const currentLine = useSelector((state) => state.drawing.currentLine);
   const redoHistory = useSelector((state) => state.drawing.redoHistory);
+  const shapes = useSelector((state) => state.drawing.shapes); // Get shapes from Redux
+
   const [canvasWidth, setCanvasWidth] = useState(window.innerWidth - 200);
   const [canvasHeight, setCanvasHeight] = useState(window.innerHeight - 100);
   const [isToolboxVisible, setIsToolboxVisible] = useState(false);
+  const [selectedTool, setSelectedTool] = useState("pencil");
+
+  const [currentShape, setCurrentShape] = useState(null);
 
   useEffect(() => {
     const updateSize = () => {
@@ -35,37 +41,70 @@ const Canvas = () => {
 
   const handleMouseDown = (e) => {
     const pos = e.target.getStage().getPointerPosition();
-    dispatch(updateCurrentLine([pos.x, pos.y])); // Start drawing
+
+    if (selectedTool === "pen" || selectedTool === "pencil") {
+      dispatch(updateCurrentLine([pos.x, pos.y])); // Start drawing
+    } else if (selectedTool === "square" || selectedTool === "rectangle") {
+      // Start drawing a shape
+      setCurrentShape({ x: pos.x, y: pos.y, width: 0, height: 0 });
+    }
   };
 
   const handleMouseMove = (e) => {
-    if (currentLine.length === 0) return;
-
     const pos = e.target.getStage().getPointerPosition();
-    dispatch(updateCurrentLine([...currentLine, pos.x, pos.y]));
+
+    if (selectedTool === "pen" || selectedTool === "pencil") {
+      if (currentLine.length > 0) {
+        dispatch(updateCurrentLine([...currentLine, pos.x, pos.y]));
+      }
+    } else if (selectedTool === "square" && currentShape) {
+      const size = Math.max(
+        Math.abs(pos.x - currentShape.x),
+        Math.abs(pos.y - currentShape.y)
+      );
+      setCurrentShape({
+        ...currentShape,
+        width: size,
+        height: size,
+      });
+    } else if (selectedTool === "rectangle" && currentShape) {
+      setCurrentShape({
+        ...currentShape,
+        width: pos.x - currentShape.x,
+        height: pos.y - currentShape.y,
+      });
+    } else if (selectedTool === "eraser" && currentShape) {
+      dispatch(removeLineAt(pos));
+    } else if (currentLine.length > 0) {
+      dispatch(updateCurrentLine([...currentLine, pos.x, pos.y]));
+    }
   };
 
   const handleMouseUp = () => {
-    if (currentLine.length === 0) return;
-
-    const newLine = { points: currentLine };
-    dispatch(addLine(newLine));
-    socket.emit("draw", newLine); // Sync with server
-    dispatch(updateCurrentLine([])); // Reset current line
+    if (selectedTool === "pen" || selectedTool === "pencil") {
+      if (currentLine.length > 0) {
+        const newLine = { points: [...currentLine], tool: selectedTool };
+        dispatch(addLine(newLine));
+        socket.emit("draw", newLine);
+        dispatch(updateCurrentLine([])); // Reset for next stroke
+      }
+    } else if (selectedTool === "square" || selectedTool === "rectangle") {
+      if (currentShape) {
+        dispatch(drawShape(currentShape));
+        socket.emit("drawShape", currentShape);
+        setCurrentShape(null);
+      }
+    }
   };
 
   const handleUndo = () => {
-    if (lines.length > 0) {
-      dispatch(undoAction());
-      socket.emit("undo", { userId: socket.id });
-    }
+    dispatch(undoAction());
+    socket.emit("undo", { userId: socket.id });
   };
 
   const handleRedo = () => {
-    if (redoHistory.length > 0) {
-      dispatch(redoAction());
-      socket.emit("redo", { userId: socket.id });
-    }
+    dispatch(redoAction());
+    socket.emit("redo", { userId: socket.id });
   };
 
   const handleClear = () => {
@@ -73,10 +112,18 @@ const Canvas = () => {
     socket.emit("clear");
   };
 
+  const handleSelectTool = (tool) => {
+    setSelectedTool(tool);
+  };
+
   // Sync Redux with WebSocket events
   useEffect(() => {
     socket.on("draw", (newLine) => {
       dispatch(addLine(newLine));
+    });
+
+    socket.on("drawShape", (shape) => {
+      dispatch(drawShape(shape));
     });
 
     socket.on("undo", (data) => {
@@ -97,6 +144,7 @@ const Canvas = () => {
 
     return () => {
       socket.off("draw");
+      socket.off("drawShape");
       socket.off("undo");
       socket.off("redo");
       socket.off("clear");
@@ -119,7 +167,7 @@ const Canvas = () => {
           isToolboxVisible ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0 md:flex md:flex-col md:items-center`}
       >
-        <Toolbox />
+        <Toolbox onSelectTool={handleSelectTool} />
       </div>
 
       <div className="flex flex-col items-center flex-1 w-full max-w-screen-xl px-4">
@@ -143,10 +191,42 @@ const Canvas = () => {
                   points={line.points}
                   stroke="black"
                   strokeWidth={2}
+                  tension={0.5}
+                  lineCap="round"
+                  lineJoin="round"
                 />
               ))}
               {currentLine.length > 0 && (
-                <Line points={currentLine} stroke="black" strokeWidth={2} />
+                <Line
+                  points={currentLine}
+                  stroke="black"
+                  strokeWidth={2}
+                  tension={0.5}
+                  lineCap="round"
+                  lineJoin="round"
+                />
+              )}
+              {shapes.map((shape, index) => (
+                <Rect
+                  key={index}
+                  x={shape.x}
+                  y={shape.y}
+                  width={shape.width}
+                  height={shape.height}
+                  stroke="black"
+                  strokeWidth={2}
+                />
+              ))}
+              {currentShape && (
+                <Rect
+                  x={currentShape.x}
+                  y={currentShape.y}
+                  width={currentShape.width}
+                  height={currentShape.height}
+                  stroke="black"
+                  strokeWidth={2}
+                  dash={[10, 5]} //  Dotted line for preview
+                />
               )}
             </Layer>
           </Stage>
