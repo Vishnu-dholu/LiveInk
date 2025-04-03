@@ -49,19 +49,20 @@ const drawingSlice = createSlice({
             const { x, y } = action.payload
             const threshold = 10    // Eraser sensitivity
 
-            state.lines = state.lines.map((line) => {
-                const newPoints = []
+            state.lines = state.lines
+                .map((line) => {
+                    const newPoints = [];
+                    for (let i = 0; i < line.points.length; i += 2) {
+                        const lineX = line.points[i];
+                        const lineY = line.points[i + 1];
 
-                for (let i = 0; i < line.points.length; i += 2) {
-                    const lineX = line.points[i]
-                    const lineY = line.points[i + 1]
-
-                    if (Math.abs(lineX - x) >= threshold || Math.abs(lineY - y) >= threshold) {
-                        newPoints.push(lineX, lineY)
+                        if (Math.abs(lineX - x) >= threshold || Math.abs(lineY - y) >= threshold) {
+                            newPoints.push(lineX, lineY);
+                        }
                     }
-                }
-                return newPoints.length > 2 ? { ...line, points: newPoints } : null
-            }).filter(Boolean)
+                    return newPoints.length > 2 ? { ...line, points: newPoints } : null;
+                })
+                .filter(Boolean);
         },
         updateCurrentLine: (state, action) => {
             state.currentLine = action.payload;

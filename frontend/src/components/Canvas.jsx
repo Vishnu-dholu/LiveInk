@@ -30,6 +30,7 @@ const Canvas = () => {
   const [selectedTool, setSelectedTool] = useState("pencil");
 
   const [currentShape, setCurrentShape] = useState(null);
+  const [isMouseDown, setIsMouseDown] = useState(false);
 
   useEffect(() => {
     const updateSize = () => {
@@ -42,6 +43,7 @@ const Canvas = () => {
 
   const handleMouseDown = (e) => {
     const pos = e.target.getStage().getPointerPosition();
+    setIsMouseDown(true);
 
     if (selectedTool === "pen" || selectedTool === "pencil") {
       dispatch(updateCurrentLine([pos.x, pos.y])); // Start drawing
@@ -55,6 +57,8 @@ const Canvas = () => {
   };
 
   const handleMouseMove = (e) => {
+    if (!isMouseDown) return;
+
     const pos = e.target.getStage().getPointerPosition();
 
     if (selectedTool === "pen" || selectedTool === "pencil") {
@@ -86,6 +90,8 @@ const Canvas = () => {
   };
 
   const handleMouseUp = () => {
+    setIsMouseDown(false);
+
     if (selectedTool === "pen" || selectedTool === "pencil") {
       if (currentLine.length > 0) {
         const newLine = {
