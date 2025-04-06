@@ -31,7 +31,8 @@
     "recoil": "^0.7.7",
     "socket.io-client": "^4.8.1",
     "tailwind-merge": "^3.1.0",
-    "tw-animate-css": "^1.2.5"
+    "tw-animate-css": "^1.2.5",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

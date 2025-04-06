@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Stage, Layer, Line, Rect } from "react-konva";
+import { Stage, Layer, Line, Rect, Text } from "react-konva";
+import { v4 as uuidv4 } from "uuid";
 import {
   addLine,
   drawShape,
@@ -9,6 +10,10 @@ import {
   redoAction,
   undoAction,
   removeLineAt,
+  addText,
+  updateCurrentText,
+  commitCurrentText,
+  updateTextContent,
 } from "../store/drawingSlice";
 import io from "socket.io-client";
 import Toolbar from "./Toolbar";
@@ -20,9 +25,10 @@ const socket = io("http://localhost:5000");
 const Canvas = () => {
   const dispatch = useDispatch();
   const lines = useSelector((state) => state.drawing.lines);
+  const shapes = useSelector((state) => state.drawing.shapes);
+  const texts = useSelector((state) => state.drawing.texts);
   const currentLine = useSelector((state) => state.drawing.currentLine);
-  const redoHistory = useSelector((state) => state.drawing.redoHistory);
-  const shapes = useSelector((state) => state.drawing.shapes); // Get shapes from Redux
+  const currentText = useSelector((state) => state.drawing.currentText);
 
   const [canvasWidth, setCanvasWidth] = useState(window.innerWidth - 100);
   const [canvasHeight, setCanvasHeight] = useState(window.innerHeight - 100);
@@ -31,6 +37,10 @@ const Canvas = () => {
 
   const [currentShape, setCurrentShape] = useState(null);
   const [isMouseDown, setIsMouseDown] = useState(false);
+  const [isEditingText, setIsEditingText] = useState(false);
+  const [editTextProps, setEditTextProps] = useState(null);
+
+  const stageRef = useRef();
 
   useEffect(() => {
     const updateSize = () => {
@@ -44,6 +54,18 @@ const Canvas = () => {
   const handleMouseDown = (e) => {
     const pos = e.target.getStage().getPointerPosition();
     setIsMouseDown(true);
+    if (isEditingText) return;
+
+    const clickedOnText = texts.some((t) => {
+      const textWidth = t.text.length * (t.fontSize * 0.6);
+      const textHeight = t.fontSize;
+      return (
+        pos.x >= t.x &&
+        pos.x <= t.x + textWidth &&
+        pos.y >= t.y &&
+        pos.y <= t.y + textHeight
+      );
+    });
 
     if (selectedTool === "pen" || selectedTool === "pencil") {
       dispatch(updateCurrentLine([pos.x, pos.y])); // Start drawing
@@ -53,6 +75,22 @@ const Canvas = () => {
     } else if (selectedTool === "eraser") {
       dispatch(removeLineAt({ x: pos.x, y: pos.y }));
       socket.emit("erase", { x: pos.x, y: pos.y });
+    } else if (
+      selectedTool === "text" &&
+      !clickedOnText &&
+      !currentText?.text
+    ) {
+      const newText = {
+        id: uuidv4(),
+        x: pos.x,
+        y: pos.y,
+        text: "Type here...",
+        fontSize: 17,
+        draggable: true,
+      };
+
+      dispatch(updateCurrentText(newText));
+      socket.emit("text:start", newText);
     }
   };
 
@@ -84,8 +122,6 @@ const Canvas = () => {
     } else if (selectedTool === "eraser") {
       dispatch(removeLineAt({ x: pos.x, y: pos.y }));
       socket.emit("erase", { x: pos.x, y: pos.y });
-    } else if (currentLine.length > 0) {
-      dispatch(updateCurrentLine([...currentLine, pos.x, pos.y]));
     }
   };
 
@@ -111,6 +147,9 @@ const Canvas = () => {
         socket.emit("drawShape", currentShape);
         setCurrentShape(null);
       }
+    } else if (selectedTool === "text" && currentText) {
+      dispatch(commitCurrentText());
+      socket.emit("text:commit", currentText);
     }
   };
 
@@ -133,8 +172,111 @@ const Canvas = () => {
     setSelectedTool(tool);
   };
 
+  const handleEditText = (textObj) => {
+    setIsEditingText(true);
+    setEditTextProps(textObj);
+
+    const stage = stageRef.current?.getStage();
+    if (!stage) return;
+
+    const textNode = stage.findOne(`#${textObj.id}`);
+    const textRect = textNode.getClientRect();
+    const stageBox = stage.container().getBoundingClientRect();
+
+    const areaPosition = {
+      x: stageBox.left + textRect.x,
+      y: stageBox.top + textRect.y,
+    };
+
+    const textarea = document.createElement("textarea");
+    textarea.value = textObj.text;
+
+    textarea.style.position = "absolute";
+    textarea.style.top = `${areaPosition.y}px`;
+    textarea.style.left = `${areaPosition.x}px`;
+    textarea.style.width = `${textRect.width}px`;
+    textarea.style.height = `${textRect.height}px`;
+    textarea.style.fontSize = `${textObj.fontSize}px`;
+    textarea.style.fontFamily = textObj.fontFamily || "Arial";
+    textarea.style.fontWeight = textObj.fontStyle || "normal";
+    textarea.style.textAlign = textObj.align || "left";
+    textarea.style.border = "none";
+    textarea.style.background = "transparent";
+    textarea.style.outline = "none";
+    textarea.style.color = "#000";
+    textarea.style.padding = "0";
+    textarea.style.margin = "0";
+    textarea.style.overflow = "hidden";
+    textarea.style.resize = "none";
+    textarea.style.zIndex = 1000;
+
+    textarea.style.minWidth = "100px";
+    textarea.style.minHeight = `${textObj.fontSize + 6}px`;
+    textarea.style.width = `${textRect.width}px`;
+    textarea.style.height = `${textRect.height}px`;
+
+    document.body.appendChild(textarea);
+    textarea.focus();
+
+    const resizeTextarea = () => {
+      textarea.style.width = "auto";
+      textarea.style.height = "auto";
+      textarea.style.width = `${textarea.scrollWidth + 2}px`;
+      textarea.style.height = `${textarea.scrollHeight + 2}px`;
+    };
+
+    textarea.addEventListener("input", resizeTextarea);
+    resizeTextarea();
+
+    textarea.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        textarea.blur();
+      }
+    });
+
+    textarea.addEventListener("blur", () => {
+      if (textarea.value !== textObj.text) {
+        dispatch(updateTextContent({ id: textObj.id, text: textarea.value }));
+        socket.emit("text:update", { id: textObj.id, text: textarea.value });
+      }
+      document.body.removeChild(textarea);
+      setIsEditingText(false);
+    });
+  };
+
+  const handleTextDragEnd = (e, textObj) => {
+    const { x, y } = e.target.position();
+
+    const updatedText = {
+      ...textObj,
+      x,
+      y,
+    };
+
+    dispatch(updateTextContent(updatedText));
+    socket.emit("text:update", updatedText);
+  };
+
   // Sync Redux with WebSocket events
   useEffect(() => {
+    if (!socket) return;
+
+    const handleTextStart = (text) => {
+      if (text?.id && typeof text.text === "string") {
+        dispatch(updateCurrentText(text));
+      }
+    };
+
+    const handleTextCommit = (text) => {
+      if (text?.id && typeof text.text === "string") {
+        dispatch(addText(text));
+      }
+    };
+
+    socket.on("text:start", handleTextStart);
+    socket.on("text:commit", handleTextCommit);
+
     socket.on("draw", (newLine) => {
       dispatch(addLine(newLine));
     });
@@ -164,6 +306,10 @@ const Canvas = () => {
       dispatch(removeLineAt(pos));
     });
 
+    socket.on("text:update", (updatedText) => {
+      dispatch(updateTextContent(updatedText));
+    });
+
     return () => {
       socket.off("draw");
       socket.off("drawShape");
@@ -171,6 +317,10 @@ const Canvas = () => {
       socket.off("redo");
       socket.off("clear");
       socket.off("erase");
+      socket.off("addText");
+      socket.off("text:commit");
+      socket.off("text:start", handleTextStart);
+      socket.off("text:update", handleTextCommit);
     };
   }, [dispatch]);
 
@@ -199,8 +349,9 @@ const Canvas = () => {
           onRedo={handleRedo}
           onClear={handleClear}
         />
-        <div className="w-full max-w-6xl max-h-[80vh] shadow-lg rounded-xl border bg-gray-100 dark:bg-gray-400 border-gray-300 dark:border-gray-700 overflow-hidden">
+        <div className="relative w-full max-w-6xl max-h-[80vh] shadow-lg rounded-xl border bg-gray-100 dark:bg-gray-400 border-gray-300 dark:border-gray-700 overflow-hidden">
           <Stage
+            ref={stageRef}
             width={canvasWidth}
             height={canvasHeight}
             onMouseDown={handleMouseDown}
@@ -222,6 +373,7 @@ const Canvas = () => {
               ))}
               {currentLine.length > 0 && (
                 <Line
+                  key="current-line"
                   points={currentLine}
                   stroke="black"
                   strokeWidth={2}
@@ -250,6 +402,35 @@ const Canvas = () => {
                   stroke="black"
                   strokeWidth={2}
                   dash={[10, 5]} //  Dotted line for preview
+                />
+              )}
+              {texts.map((t) => (
+                <Text
+                  key={t.id}
+                  id={t.id}
+                  text={
+                    t.text === "Type here..." &&
+                    isEditingText &&
+                    editTextProps?.id === t.id
+                      ? ""
+                      : t.text
+                  }
+                  x={t.x}
+                  y={t.y}
+                  fontSize={t.fontSize}
+                  fill="black"
+                  draggable
+                  onDblClick={() => handleEditText(t)}
+                  onDragEnd={(e) => handleTextDragEnd(e, t)}
+                />
+              ))}
+              {currentText && (
+                <Text
+                  text={currentText.text}
+                  x={currentText.x}
+                  y={currentText.y}
+                  fontSize={currentText.fontSize}
+                  fill="gray"
                 />
               )}
             </Layer>

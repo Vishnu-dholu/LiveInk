@@ -4,9 +4,11 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
     lines: [],
     shapes: [],
+    texts: [],
     undoHistory: [],
     redoHistory: [],
     currentLine: [],
+    currentText: null
 };
 
 const drawingSlice = createSlice({
@@ -26,24 +28,39 @@ const drawingSlice = createSlice({
         undoAction: (state) => {
             if (state.undoHistory.length > 0) {
                 const prevState = state.undoHistory.pop()
-                state.redoHistory.push({ lines: [...state.lines], shapes: [...state.shapes] }); // Save current state for redo
-                state.lines = prevState.lines;
-                state.shapes = prevState.shapes;
+                state.redoHistory.push({
+                    lines: [...state.lines],
+                    shapes: [...state.shapes],
+                    texts: [...state.texts]
+                });
+                state.lines = prevState.lines || [];
+                state.shapes = prevState.shapes || [];
+                state.texts = prevState.texts || [];
             }
         },
         redoAction: (state) => {
             if (state.redoHistory.length > 0) {
                 const redoState = state.redoHistory.pop();
-                state.undoHistory.push({ lines: [...state.lines], shapes: [...state.shapes] });
-                state.lines = redoState.lines
-                state.shapes = redoState.shapes
+                state.undoHistory.push({
+                    lines: [...state.lines],
+                    shapes: [...state.shapes],
+                    texts: [...state.texts]
+                });
+                state.lines = redoState.lines || [];
+                state.shapes = redoState.shapes || [];
+                state.texts = redoState.texts || [];
             }
         },
         clearCanvas: (state) => {
-            state.undoHistory.push({ lines: [...state.lines], shapes: [...state.shapes] }); // Save before clearing
+            state.undoHistory.push({
+                lines: [...state.lines],
+                shapes: [...state.shapes],
+                texts: [...state.texts]
+            }); // Save before clearing
             state.redoHistory = []; // Clear redo stack
             state.lines = [];
             state.shapes = [];
+            state.texts = [];
         },
         removeLineAt: (state, action) => {
             const { x, y } = action.payload
@@ -67,10 +84,39 @@ const drawingSlice = createSlice({
         updateCurrentLine: (state, action) => {
             state.currentLine = action.payload;
         },
+        addText: (state, action) => {
+            state.undoHistory.push({
+                lines: [...state.lines],
+                shapes: [...state.shapes],
+                texts: [...state.texts]
+            })
+            state.texts.push(action.payload)
+            state.redoHistory = []
+        },
+        updateCurrentText: (state, action) => {
+            state.currentText = action.payload
+        },
+        commitCurrentText: (state) => {
+            if (state.currentText) {
+                state.undoHistory.push({
+                    lines: [...state.lines],
+                    shapes: [...state.shapes],
+                    texts: [...state.texts]
+                })
+                state.texts.push(state.currentText)
+                state.currentText = null
+                state.redoHistory = []
+            }
+        },
+        updateTextContent: (state, action) => {
+            const { id, text } = action.payload
+            const target = state.texts.find(t => t.id === id)
+            if (target) target.text = text
+        }
     },
 });
 
-export const { addLine, drawShape, undoAction, redoAction, clearCanvas, removeLineAt, updateCurrentLine } =
+export const { addLine, drawShape, undoAction, redoAction, clearCanvas, removeLineAt, updateCurrentLine, addText, updateCurrentText, commitCurrentText, updateTextContent } =
     drawingSlice.actions;
 
 export default drawingSlice.reducer;

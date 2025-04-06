@@ -5,6 +5,7 @@ import {
   PenTool,
   RectangleHorizontal,
   Square,
+  Type,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import {
@@ -16,6 +17,7 @@ import {
 
 const tools = [
   { tool: "select", Icon: MousePointer2, name: "Select" },
+  { tool: "text", Icon: Type, name: "Text" },
   { tool: "pen", Icon: PenTool, name: "Pen" },
   { tool: "eraser", Icon: EraserIcon, name: "Eraser" },
   { tool: "pencil", Icon: Pencil, name: "Pencil" },
