@@ -1,25 +1,39 @@
 import { useEffect, useState } from "react";
+// Import icons for Undo, Redo, Clear
 import { FaUndo, FaRedo, FaTrash } from "react-icons/fa";
+// Import custom UI components
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 
+/**
+ * Toolbar Component
+ * Provides controls for undo, redo, clearing the canvas and toggling dark mode.
+ *
+ * Props:
+ * - onUndo: function to handle undo operation
+ * - onRedo: function to handle redo operation
+ * - onClear: function to handle clearing the canvas
+ */
 const Toolbar = ({ onUndo, onRedo, onClear }) => {
+  //  Manage dark mode toggle using localStorage for persistence
   const [isDarkMode, setIsDarkMode] = useState(
     localStorage.getItem("theme") === "dark"
   );
 
+  //  Whenever dark mode state changes, apply/remove the `dark` class to the root element
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
+      localStorage.setItem("theme", "dark"); //  Persist choice
     } else {
       document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
+      localStorage.setItem("theme", "light"); //  Persist choice
     }
   }, [isDarkMode]);
   return (
     <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-4 bg-white dark:bg-gray-700 p-4 rounded-lg shadow-lg border border-gray-300 dark:border-gray-700 mb-4">
+      {/* Undo Button */}
       <Button
         variant="outline"
         onClick={onUndo}
@@ -28,6 +42,8 @@ const Toolbar = ({ onUndo, onRedo, onClear }) => {
         <FaUndo className="text-lg" />
         Undo
       </Button>
+
+      {/* Redo Button */}
       <Button
         variant="outline"
         onClick={onRedo}
@@ -36,6 +52,8 @@ const Toolbar = ({ onUndo, onRedo, onClear }) => {
         <FaRedo className="text-lg" />
         Redo
       </Button>
+
+      {/* Clear Button */}
       <Button
         variant="destructive"
         onClick={onClear}
@@ -47,6 +65,7 @@ const Toolbar = ({ onUndo, onRedo, onClear }) => {
         Clear
       </Button>
 
+      {/* Dark Mode Toggle */}
       <div className="flex items-center space-x-2 mt-2 sm:mt-0">
         <Label
           htmlFor="dark-mode-toggle"

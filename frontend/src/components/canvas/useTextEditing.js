@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
     updateTextContent,
@@ -7,13 +7,25 @@ import {
 } from "@/store/drawingSlice";
 import { v4 as uuidv4 } from "uuid";
 
+/**
+ * Custom hook to handle text creation, editing and committing logic
+ * inside the collaborative canvas using Konva and Redux
+ */
 const useTextEditing = (stageRef, socket) => {
     const dispatch = useDispatch();
+
+    // Redux state selectors
     const texts = useSelector((state) => state.drawing.texts);
     const currentText = useSelector((state) => state.drawing.currentText);
+
+    // Local UI states for text editing
     const [isEditingText, setIsEditingText] = useState(false);
     const [editTextProps, setEditTextProps] = useState(null);
 
+    /**
+     * Called when the canvas is clicked using the "Text" tool.
+     * Adds a new text element if the click isn't over existing text.
+     */
     const handleAddText = (pointerPos, selectedTool) => {
         const clickedOnText = texts.some((t) => {
             const textWidth = t.text.length * (t.fontSize * 0.6);
@@ -45,6 +57,9 @@ const useTextEditing = (stageRef, socket) => {
         }
     };
 
+    /**
+     * Called to commit the currently active text object to the text array.
+     */
     const handleCommitText = () => {
         if (currentText) {
             dispatch(commitCurrentText());
@@ -52,6 +67,10 @@ const useTextEditing = (stageRef, socket) => {
         }
     };
 
+    /**
+     * Called when user double-clicks on a text node.
+     * Creates a native textarea overlay for editing.
+     */
     const handleEditText = (textObj) => {
         setIsEditingText(true);
         setEditTextProps(textObj);
@@ -68,9 +87,11 @@ const useTextEditing = (stageRef, socket) => {
             y: stageBox.top + textRect.y,
         };
 
+        // Create native HTML textarea element for editing
         const textarea = document.createElement("textarea");
         textarea.value = textObj.text;
 
+        // Styling the textarea to match canvas text
         Object.assign(textarea.style, {
             position: "absolute",
             top: `${areaPosition.y}px`,
@@ -97,6 +118,7 @@ const useTextEditing = (stageRef, socket) => {
         document.body.appendChild(textarea);
         textarea.focus();
 
+        // Resize textarea dynamically based on content
         const resizeTextarea = () => {
             textarea.style.width = "auto";
             textarea.style.height = "auto";
@@ -107,6 +129,7 @@ const useTextEditing = (stageRef, socket) => {
         textarea.addEventListener("input", resizeTextarea);
         resizeTextarea();
 
+        // On Enter key press, blur to trigger save
         textarea.addEventListener("keydown", (e) => {
             if (e.key === "Enter") {
                 e.preventDefault();
@@ -114,6 +137,7 @@ const useTextEditing = (stageRef, socket) => {
             }
         });
 
+        // When editing ends (on blur), update Redux and emit changes
         textarea.addEventListener("blur", () => {
             if (textarea.value !== textObj.text) {
                 dispatch(updateTextContent({ id: textObj.id, text: textarea.value }));
@@ -123,19 +147,10 @@ const useTextEditing = (stageRef, socket) => {
             setIsEditingText(false);
         });
     };
-
-    // const handleTextDragEnd = (e, textObj) => {
-    //     const { x, y } = e.target.position();
-    //     const updatedText = { ...textObj, x, y };
-    //     dispatch(updateTextContent(updatedText));
-    //     socket.emit("text:update", updatedText);
-    // };
-
     return {
         handleAddText,
         handleEditText,
         handleCommitText,
-        // handleTextDragEnd,
         isEditingText,
         editTextProps,
     };

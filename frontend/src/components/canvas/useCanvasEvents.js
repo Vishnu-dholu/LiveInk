@@ -13,11 +13,13 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
     const [currentShape, setCurrentShape] = useState(null);
     const [isMouseDown, setIsMouseDown] = useState(false);
 
+    // Utility: Get current mouse pointer position relative to canvas
     const getPointerPosition = () => {
         const stage = stageRef.current?.getStage()
         return stage?.getPointerPosition()
     }
 
+    // Check of user clicked inside an existing text area
     const handleMouseDown = () => {
         const pos = getPointerPosition()
         setIsMouseDown(true);
