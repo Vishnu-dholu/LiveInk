@@ -35,27 +35,32 @@ const TextRenderer = ({ isEditingText, editTextProps, onEdit }) => {
   return (
     <>
       {/* Render all finalized text elements */}
-      {texts.map((t) => (
-        <Text
-          key={t.id} //  Unique key for each text object
-          id={t.id} //  ID used to identify which text is edited
-          text={
-            // If text is "Type here..." and this text is being edited, show empty string to allow user input
-            t.text === "Type here..." &&
-            isEditingText &&
-            editTextProps?.id === t.id
-              ? ""
-              : t.text
-          }
-          x={t.x} //  X position on canvas
-          y={t.y} //  Y position on canvas
-          fontSize={t.fontSize}
-          fill="black"
-          draggable
-          onDblClick={() => onEdit(t)} //  Double-click triggers edit mode
-          onDragEnd={(e) => handleTextDragEnd(e, t)} //  Handle repositioning after drag
-        />
-      ))}
+      {texts.map((t) => {
+        // Skip rendering the currently edited text
+        if (isEditingText && editTextProps?.id === t.id) return null;
+
+        return (
+          <Text
+            key={t.id} //  Unique key for each text object
+            id={t.id} //  ID used to identify which text is edited
+            text={
+              // If text is "Type here..." and this text is being edited, show empty string to allow user input
+              t.text === "Type here..." &&
+              isEditingText &&
+              editTextProps?.id === t.id
+                ? ""
+                : t.text
+            }
+            x={t.x} //  X position on canvas
+            y={t.y} //  Y position on canvas
+            fontSize={t.fontSize}
+            fill="black"
+            draggable
+            onDblClick={() => onEdit(t)} //  Double-click triggers edit mode
+            onDragEnd={(e) => handleTextDragEnd(e, t)} //  Handle repositioning after drag
+          />
+        );
+      })}
 
       {/* Render current text being created but not commited yet */}
       {currentText && (
