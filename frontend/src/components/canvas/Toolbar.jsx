@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { FaUndo, FaRedo, FaTrash } from "react-icons/fa";
-import { Button } from "./ui/button";
-import { Label } from "./ui/label";
-import { Switch } from "./ui/switch";
+import { Button } from "../ui/button";
+import { Label } from "../ui/label";
+import { Switch } from "../ui/switch";
 
 const Toolbar = ({ onUndo, onRedo, onClear }) => {
   const [isDarkMode, setIsDarkMode] = useState(
