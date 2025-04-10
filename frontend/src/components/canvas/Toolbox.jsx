@@ -1,5 +1,6 @@
 // Importing icons for various tools from lucide-react
 import {
+  Circle,
   EraserIcon,
   MousePointer2,
   Pencil,
@@ -26,6 +27,7 @@ const tools = [
   { tool: "pencil", Icon: Pencil, name: "Pencil" },
   { tool: "square", Icon: Square, name: "Square" },
   { tool: "rectangle", Icon: RectangleHorizontal, name: "Rectangle" },
+  { tool: "circle", Icon: Circle, name: "Circle" },
 ];
 
 /**

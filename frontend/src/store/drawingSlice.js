@@ -104,6 +104,7 @@ const drawingSlice = createSlice({
             }
         },
         updateTextContent: (state, action) => {
+            state.undoHistory.push(getSnapshot(state));
             const { id, text } = action.payload
             const target = state.texts.find(t => t.id === id)
             if (target) target.text = text

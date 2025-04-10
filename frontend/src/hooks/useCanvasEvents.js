@@ -38,7 +38,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
 
         if (selectedTool === "pen" || selectedTool === "pencil") {
             dispatch(updateCurrentLine([pos.x, pos.y])); // Start drawing
-        } else if (selectedTool === "square" || selectedTool === "rectangle") {
+        } else if (["square", "rectangle"].includes(selectedTool)) {
             // Start drawing a shape
             dispatch(updateCurrentShape({ x: pos.x, y: pos.y, width: 0, height: 0 }));
         } else if (selectedTool === "eraser") {
@@ -60,6 +60,8 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
 
             dispatch(updateCurrentText(newText));
             socket.emit("text:start", newText);
+        } else if (selectedTool === "circle") {
+            dispatch(updateCurrentShape({ type: "circle", x: pos.x, y: pos.y, radius: 0 }))
         }
     };
 
@@ -98,6 +100,17 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
             dispatch(removeLineAt({ x: pos.x, y: pos.y }));
             socket.emit("erase", { x: pos.x, y: pos.y });
         }
+        else if (selectedTool === "circle" && currentShape) {
+            const dx = pos.x - currentShape.x;
+            const dy = pos.y - currentShape.y;
+            const radius = Math.sqrt(dx * dx + dy * dy);
+            const updatedShape = {
+                ...currentShape,
+                radius,
+            };
+            dispatch(updateCurrentShape(updatedShape));
+            socket.emit("shape:live", updatedShape);
+        }
     };
 
     const handleMouseUp = () => {
@@ -116,10 +129,11 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
                 socket.emit("draw", newLine);
                 dispatch(updateCurrentLine([])); // Reset for next stroke
             }
-        } else if (selectedTool === "square" || selectedTool === "rectangle") {
+        } else if (["square", "rectangle", "circle"].includes(selectedTool)) {
             if (currentShape) {
-                dispatch(drawShape(currentShape));
-                socket.emit("drawShape", currentShape);
+                const shapeWithTool = { ...currentShape, tool: selectedTool }
+                dispatch(drawShape(shapeWithTool));
+                socket.emit("drawShape", shapeWithTool);
                 dispatch(clearCurrentShape())
             }
         } else if (selectedTool === "text" && currentText) {
