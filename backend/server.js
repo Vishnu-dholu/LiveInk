@@ -21,66 +21,120 @@ app.use(express.json())
 const userRedoStacks = new Map();
 
 //  WebSocket connection handling
+// io.on("connection", (socket) => {
+//     console.log(`A user connected: ${socket.id}`)
+
+//     userRedoStacks.set(socket.id, []);
+
+//     /**
+//      * Event Listener: Listens for "draw" events from a connected client.
+//      * Broadcasts the drawing data to all other connected users.
+//      */
+//     socket.on("draw", async (newLine) => {
+//         socket.broadcast.emit("draw", newLine) //  Send the received drawing data to all other clients
+
+//         // Save drawing to the database
+//         // try {
+//         //     await pool.query("INSERT INTO drawings (drawing_data) VALUES ($1)", [JSON.stringify(newLine)])
+//         // } catch (error) {
+//         //     console.error("Error saving drawing:", error);
+//         // }
+//     })
+
+//     socket.on("undo", (previousState, data) => {
+//         const redoStack = userRedoStacks.get(socket.id)
+//         if (!redoStack) {
+//             console.log(`Redo stack not found for user: ${socket.id}`)
+//             return
+//         }
+//         redoStack.push(previousState)
+//         socket.broadcast.emit("undo", data);
+//         io.emit("undo", previousState)
+//     });
+
+//     socket.on("redo", (data) => {
+//         const redoStack = userRedoStacks.get(socket.id)
+//         if (!redoStack || redoStack.length === 0) {
+//             console.log("Redo stack is empty.")
+//             return
+//         }
+
+//         const nextState = redoStack.pop()
+//         socket.broadcast.emit("redo", data);
+//         io.emit("redo", nextState)
+//     })
+
+//     socket.on("clear", async () => {
+//         redoStack = []
+//         io.emit("clear")
+
+//         try {
+//             await pool.query("DELETE FROM drawings")
+//         } catch (error) {
+//             console.error("Error clearing drawings:", error);
+//         }
+//     })
+
+//     // Event Listener: Triggered when a user disconnects from the server
+//     socket.on("disconnect", () => {
+//         console.log(`User disconnected: ${socket.id}`)
+//         userRedoStacks.delete(socket.id)
+//     })
+// })
+
 io.on("connection", (socket) => {
     console.log(`A user connected: ${socket.id}`)
 
-    userRedoStacks.set(socket.id, []);
+    socket.on("draw", (newLine) => {
+        socket.broadcast.emit("draw", newLine)
+    });
 
-    /**
-     * Event Listener: Listens for "draw" events from a connected client.
-     * Broadcasts the drawing data to all other connected users.
-     */
-    socket.on("draw", async (newLine) => {
-        socket.broadcast.emit("draw", newLine) //  Send the received drawing data to all other clients
+    socket.on("drawShape", (shape) => {
+        socket.broadcast.emit("drawShape", shape)
+    });
 
-        // Save drawing to the database
-        // try {
-        //     await pool.query("INSERT INTO drawings (drawing_data) VALUES ($1)", [JSON.stringify(newLine)])
-        // } catch (error) {
-        //     console.error("Error saving drawing:", error);
-        // }
-    })
+    socket.on("draw:live", (newLine) => {
+        socket.broadcast.emit("draw:live", newLine)
+    });
 
-    socket.on("undo", (previousState, data) => {
-        const redoStack = userRedoStacks.get(socket.id)
-        if (!redoStack) {
-            console.log(`Redo stack not found for user: ${socket.id}`)
-            return
-        }
-        redoStack.push(previousState)
+    socket.on("shape:live", (newLine) => {
+        socket.broadcast.emit("shape:live", newLine)
+    });
+
+    socket.on("text:start", (textObj) => {
+        socket.broadcast.emit("text:start", textObj);
+    });
+
+    socket.on("text:update", (textObj) => {
+        socket.broadcast.emit("text:update", textObj);
+    });
+
+    socket.on("text:commit", (textObj) => {
+        socket.broadcast.emit("text:commit", textObj);
+    });
+
+    socket.on("erase", (coords) => {
+        socket.broadcast.emit("erase", coords);
+    });
+
+    socket.on("undo", (data) => {
         socket.broadcast.emit("undo", data);
-        io.emit("undo", previousState)
     });
 
     socket.on("redo", (data) => {
-        const redoStack = userRedoStacks.get(socket.id)
-        if (!redoStack || redoStack.length === 0) {
-            console.log("Redo stack is empty.")
-            return
-        }
-
-        const nextState = redoStack.pop()
         socket.broadcast.emit("redo", data);
-        io.emit("redo", nextState)
-    })
+    });
 
-    socket.on("clear", async () => {
-        redoStack = []
-        io.emit("clear")
+    socket.on("clear", () => {
+        socket.broadcast.emit("clear");
+    });
 
-        try {
-            await pool.query("DELETE FROM drawings")
-        } catch (error) {
-            console.error("Error clearing drawings:", error);
-        }
-    })
-
-    // Event Listener: Triggered when a user disconnects from the server
     socket.on("disconnect", () => {
-        console.log(`User disconnected: ${socket.id}`)
-        userRedoStacks.delete(socket.id)
-    })
-})
+        console.log(`User disconnected: ${socket.id}`);
+    });
+});
+
+
 // }) Start the Express server on port 5000
 server.listen(5000, () => {
     console.log("Backend server running on http://localhost:5000")

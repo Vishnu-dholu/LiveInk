@@ -7,8 +7,8 @@ import ShapeRenderer from "./ShapeRenderer";
 import TextRenderer from "./TextRenderer";
 
 // Custom hooks for handling canvas interactions
-import useCanvasEvents from "./useCanvasEvents"; //  Manages mouse drawing events
-import useTextEditing from "./useTextEditing"; //  Manages in-place text editing logic
+import useCanvasEvents from "../../hooks/useCanvasEvents"; //  Manages mouse drawing events
+import useTextEditing from "../../hooks/useTextEditing"; //  Manages in-place text editing logic
 
 // Socket instance for real-time syncing
 import { socket } from "@/lib/socket";
@@ -45,13 +45,18 @@ const DrawingStage = ({
         <LineRenderer lines={lines} currentLine={currentLine} />
 
         {/* Render all previous and current freehand lines  */}
-        <ShapeRenderer shapes={shapes} currentShape={currentShape} />
+        <ShapeRenderer
+          shapes={shapes}
+          currentShape={currentShape}
+          selectedTool={selectedTool}
+        />
 
         {/* Render static text elements and handle live editing */}
         <TextRenderer
           isEditingText={isEditingText} //  If true, show editable textarea
           editTextProps={editTextProps} //  Props for currently edited text
           onEdit={handleEditText} //  Function to handle double-click editing
+          socket={socket}
         />
       </Layer>
     </Stage>

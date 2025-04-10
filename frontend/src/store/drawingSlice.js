@@ -8,7 +8,8 @@ const initialState = {
     undoHistory: [],
     redoHistory: [],
     currentLine: [],
-    currentText: null
+    currentText: null,
+    currentShape: null,
 };
 
 const drawingSlice = createSlice({
@@ -26,6 +27,12 @@ const drawingSlice = createSlice({
             state.shapes.push(action.payload)
             state.redoHistory = []
         },
+        updateCurrentShape: (state, action) => {
+            state.currentShape = action.payload
+        },
+        clearCurrentShape: (state) => {
+            state.currentShape = null
+        },
 
         // ----- UNDO / REDO / CLEAR -----
         undoAction: (state) => {
@@ -39,7 +46,7 @@ const drawingSlice = createSlice({
             if (state.redoHistory.length > 0) {
                 const redoState = state.redoHistory.pop();
                 state.undoHistory.push(getSnapshot(state));
-                restoreSnapshot(state, prevState)
+                restoreSnapshot(state, redoState)
             }
         },
         clearCanvas: (state) => {
@@ -100,7 +107,29 @@ const drawingSlice = createSlice({
             const { id, text } = action.payload
             const target = state.texts.find(t => t.id === id)
             if (target) target.text = text
-        }
+        },
+
+        updateLinePosition: (state, action) => {
+            const { index, x, y } = action.payload
+            const line = state.lines[index]
+            if (line) {
+                const oldPoints = [...line.points]
+                const newPoints = []
+
+                for (let i = 0; i < oldPoints.length; i += 2) {
+                    newPoints.push(oldPoints[i] + x, oldPoints[i + 1] + y)
+                }
+
+                line.points = newPoints
+            }
+        },
+        updateShapePosition: (state, action) => {
+            const { index, x, y } = action.payload;
+            if (state.shapes[index]) {
+                state.shapes[index].x = x;
+                state.shapes[index].y = y;
+            }
+        },
     },
 });
 
@@ -120,7 +149,20 @@ function restoreSnapshot(state, snapshot) {
     state.texts = snapshot.texts || [];
 }
 
-export const { addLine, drawShape, undoAction, redoAction, clearCanvas, removeLineAt, updateCurrentLine, addText, updateCurrentText, commitCurrentText, updateTextContent } =
-    drawingSlice.actions;
+export const {
+    addLine,
+    drawShape,
+    updateCurrentShape,
+    clearCurrentShape,
+    undoAction,
+    redoAction,
+    clearCanvas,
+    removeLineAt,
+    updateCurrentLine,
+    addText,
+    updateCurrentText,
+    commitCurrentText,
+    updateTextContent,
+} = drawingSlice.actions;
 
 export default drawingSlice.reducer;

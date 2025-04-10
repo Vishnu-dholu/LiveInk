@@ -1,14 +1,16 @@
 // Import Rect (rectangle shape) component from react-konva
+import { socket } from "@/lib/socket";
 import { Rect } from "react-konva";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 /**
  * ShapeRenderer is responsible for rendering all static shapes
  * (like reactangles) as well as a live preview of the currently being drawn.
  */
-const ShapeRenderer = ({ currentShape }) => {
+const ShapeRenderer = ({ currentShape, selectedTool }) => {
   //  Get all finalized shapes from Redux store
   const shapes = useSelector((state) => state.drawing.shapes);
+  const dispatch = useDispatch();
 
   return (
     <>
@@ -35,6 +37,12 @@ const ShapeRenderer = ({ currentShape }) => {
           stroke="black"
           strokeWidth={2}
           dash={[10, 5]} //  Dotted line for preview
+          draggable={selectedTool === "select"}
+          onDragEnd={(e) => {
+            const { x, y } = e.target.position();
+            dispatch(updateShapePosition({ index, x, y }));
+            socket.emit("shape:update", { index, x, y });
+          }}
         />
       )}
     </>

@@ -147,6 +147,7 @@ const useTextEditing = (stageRef, socket) => {
             setIsEditingText(false);
         });
     };
+
     return {
         handleAddText,
         handleEditText,

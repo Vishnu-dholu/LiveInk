@@ -1,5 +1,5 @@
 // Importing React hooks and necessary functions
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 // UI components
@@ -8,11 +8,19 @@ import Toolbox from "./Toolbox"; //  Side toolbox with drawing tools
 import { Menu } from "lucide-react"; //  Icon component used for mobile menu button
 import DrawingStage from "./DrawingStage"; //  The Konva canvas rendering layer
 // Redux actions for undo, redo and clearing canvas
-import { undoAction, redoAction, clearCanvas } from "@/store/drawingSlice";
+import {
+  undoAction,
+  redoAction,
+  clearCanvas,
+  updateCurrentLine,
+  updateCurrentShape,
+} from "@/store/drawingSlice";
 // Socket instance for real-time collaboration
 import { socket } from "@/lib/socket";
+import { useSocketListeners } from "@/hooks/useSocketListeners";
 
 const Canvas = () => {
+  useSocketListeners(socket);
   const dispatch = useDispatch();
   // Ref to the Konva stage element
   const stageRef = useRef();
@@ -28,32 +36,64 @@ const Canvas = () => {
   // Redux state: the current line being drawn (live)
   const currentLine = useSelector((state) => state.drawing.currentLine);
 
-  // Destructure returned values from useTextEditing hook
-  // const { handleEditText, isEditingText, editTextProps } = useTextEditing(
-  //   stageRef,
-  //   socket
-  // );
-
   // Handler for tool selection from toolbox
   const handleSelectTool = (tool) => setSelectedTool(tool);
 
   // Undo action and emit to other users via socket
   const handleUndo = () => {
     dispatch(undoAction());
+    dispatch(updateCurrentLine([]));
+    dispatch(updateCurrentShape([]));
     socket.emit("undo", { userId: socket.id });
   };
 
   // Redo action and emit to other users via socket
   const handleRedo = () => {
     dispatch(redoAction());
+    dispatch(updateCurrentLine([]));
+    dispatch(updateCurrentShape([]));
     socket.emit("redo", { userId: socket.id });
   };
 
   // Clear canvas and emit to other users
   const handleClear = () => {
     dispatch(clearCanvas());
+    dispatch(updateCurrentLine([]));
+    dispatch(updateCurrentShape([]));
     socket.emit("clear");
   };
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleRemoteUndo = () => {
+      dispatch(undoAction());
+      dispatch(updateCurrentLine([]));
+      dispatch(updateCurrentShape([]));
+    };
+
+    const handleRemoteRedo = () => {
+      dispatch(redoAction());
+      dispatch(updateCurrentLine([]));
+      dispatch(updateCurrentShape([]));
+    };
+
+    const handleRemoteClear = () => {
+      dispatch(clearCanvas());
+      dispatch(updateCurrentLine([]));
+      dispatch(updateCurrentShape([]));
+    };
+
+    socket.on("undo", handleRemoteUndo);
+    socket.on("redo", handleRemoteRedo);
+    socket.on("clear", handleRemoteClear);
+
+    return () => {
+      socket.off("undo", handleRemoteUndo);
+      socket.off("redo", handleRemoteRedo);
+      socket.off("clear", handleRemoteClear);
+    };
+  }, [dispatch]);
 
   return (
     <div className="flex flex-col md:flex-row items-center md:items-start justify-center h-full w-full bg-gray-300 dark:bg-gray-900 p-4">
@@ -93,9 +133,6 @@ const Canvas = () => {
             lines={lines} //  All saved lines
             shapes={shapes} //  All saved shapes
             currentLine={currentLine} //  Line currently being drawn
-            // handleEditText={handleEditText} //  Start editing text on double-click
-            // editTextProps={editTextProps} //  Data for current editable text
-            // isEditingText={isEditingText} //  Whether user is editing any text
           />
         </div>
       </div>

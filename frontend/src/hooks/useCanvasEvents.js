@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
-import { addLine, drawShape, updateCurrentLine, removeLineAt, updateCurrentText, commitCurrentText } from "@/store/drawingSlice";
+import { addLine, drawShape, updateCurrentLine, removeLineAt, updateCurrentText, commitCurrentText, updateCurrentShape, clearCurrentShape } from "@/store/drawingSlice";
 import { socket } from "@/lib/socket";
 
 const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
@@ -9,8 +9,8 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
     const texts = useSelector((state) => state.drawing.texts);
     const currentLine = useSelector((state) => state.drawing.currentLine);
     const currentText = useSelector((state) => state.drawing.currentText);
+    const currentShape = useSelector((state) => state.drawing.currentShape);
 
-    const [currentShape, setCurrentShape] = useState(null);
     const [isMouseDown, setIsMouseDown] = useState(false);
 
     // Utility: Get current mouse pointer position relative to canvas
@@ -40,7 +40,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
             dispatch(updateCurrentLine([pos.x, pos.y])); // Start drawing
         } else if (selectedTool === "square" || selectedTool === "rectangle") {
             // Start drawing a shape
-            setCurrentShape({ x: pos.x, y: pos.y, width: 0, height: 0 });
+            dispatch(updateCurrentShape({ x: pos.x, y: pos.y, width: 0, height: 0 }));
         } else if (selectedTool === "eraser") {
             dispatch(removeLineAt({ x: pos.x, y: pos.y }));
             socket.emit("erase", { x: pos.x, y: pos.y });
@@ -70,24 +70,30 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
 
         if (selectedTool === "pen" || selectedTool === "pencil") {
             if (currentLine.length > 0) {
-                dispatch(updateCurrentLine([...currentLine, pos.x, pos.y]));
+                const updatedLine = [...currentLine, pos.x, pos.y]
+                dispatch(updateCurrentLine(updatedLine));
+                socket.emit("draw:live", updatedLine)
             }
         } else if (selectedTool === "square" && currentShape) {
             const size = Math.max(
                 Math.abs(pos.x - currentShape.x),
                 Math.abs(pos.y - currentShape.y)
             );
-            setCurrentShape({
+            const updatedShape = {
                 ...currentShape,
                 width: size,
                 height: size,
-            });
+            }
+            dispatch(updateCurrentShape(updatedShape));
+            socket.emit("shape:live", updatedShape)
         } else if (selectedTool === "rectangle" && currentShape) {
-            setCurrentShape({
+            const updatedShape = {
                 ...currentShape,
                 width: pos.x - currentShape.x,
                 height: pos.y - currentShape.y,
-            });
+            }
+            dispatch(updateCurrentShape(updatedShape));
+            socket.emit("shape:live", updatedShape)
         } else if (selectedTool === "eraser") {
             dispatch(removeLineAt({ x: pos.x, y: pos.y }));
             socket.emit("erase", { x: pos.x, y: pos.y });
@@ -114,11 +120,12 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
             if (currentShape) {
                 dispatch(drawShape(currentShape));
                 socket.emit("drawShape", currentShape);
-                setCurrentShape(null);
+                dispatch(clearCurrentShape())
             }
         } else if (selectedTool === "text" && currentText) {
+            const committedText = { ...currentText };
             dispatch(commitCurrentText());
-            socket.emit("text:commit", currentText);
+            socket.emit("text:commit", committedText);
         }
     };
 
