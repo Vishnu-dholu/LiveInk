@@ -96,37 +96,30 @@ const Canvas = () => {
   }, [dispatch]);
 
   return (
-    <div className="flex flex-col md:flex-row items-center md:items-start justify-center h-full w-full bg-gray-300 dark:bg-gray-900 p-4">
-      {/* Hamburger menu icon shown on small screens to toggle toolbox */}
-      <div className="md:hidden absolute top-58 left-4 z-50">
-        <button
-          onClick={() => setIsToolboxVisible(!isToolboxVisible)}
-          className="p-2 bg-gray-800 text-white rounded-md"
-        >
-          <Menu size={28} />
-        </button>
-      </div>
-
+    <div className="flex flex-col md:flex-row h-full w-full bg-gray-300 dark:bg-gray-900 overflow-hidden relative">
       {/* Side toolbox (vertical on desktop, slide-in on mobile) */}
-      <div
-        className={`fixed md:relative md:w-20 w-full md:h-auto mt-6 top-50 left-1 flex md:flex-col justify-center md:justify-start transition-transform duration-300 ease-in-out ${
-          isToolboxVisible ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 md:flex md:flex-col md:items-center`}
-      >
+      <div className="hidden md:flex md:w-20 md:relative md:flex-col items-center justify-center left-6">
         <Toolbox onSelectTool={handleSelectTool} activeTool={selectedTool} />
       </div>
 
       {/* Main content area containing toolbax and canvas */}
-      <div className="flex flex-col items-center flex-1 w-full max-w-screen-xl px-4">
+      <div className="flex flex-col items-center flex-1 w-full px-4 md:px-6 py-4 md:py-6 overflow-auto">
         {/* Toolbar with undo, redo, clear functionality */}
-        <Toolbar
-          onUndo={handleUndo}
-          onRedo={handleRedo}
-          onClear={handleClear}
-        />
+        <div className="w-full max-w-4xl mb-4">
+          <Toolbar
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            onClear={handleClear}
+          />
+        </div>
+
+        {/* Toolbox - Mobile (Horizontal below Toolbar) */}
+        <div className="flex md:hidden w-full justify-center mb-4">
+          <Toolbox onSelectTool={handleSelectTool} activeTool={selectedTool} />
+        </div>
 
         {/* Drawing area: canvas rendered using react-konva */}
-        <div className="relative w-full max-w-6xl max-h-[80vh] shadow-lg rounded-xl border bg-gray-100 dark:bg-gray-400 border-gray-300 dark:border-gray-700 overflow-hidden">
+        <div className="w-full max-w-6xl flex-1 h-full rounded-xl shadow-lg border bg-gray-100 dark:bg-gray-400 border-gray-300 dark:border-gray-700 overflow-hidden">
           <DrawingStage
             stageRef={stageRef} //  Reference to Konva stage
             selectedTool={selectedTool} //  Current tool selected from toolbox

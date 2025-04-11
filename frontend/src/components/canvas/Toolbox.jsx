@@ -42,7 +42,7 @@ const Toolbox = ({ onSelectTool, activeTool }) => {
   return (
     // TooltipProvider wraps all tooltips for consistency
     <TooltipProvider>
-      <div className="flex md:flex-col flex-wrap items-center justify-center gap-3 border border-white p-3 rounded-2xl bg-white dark:bg-gray-700 shadow-md">
+      <div className="grid grid-cols-4 md:grid-cols-1 md:flex md:flex-col items-center justify-items-center md:items-center md:justify-center gap-2 p-2 bg-gray-600 md:bg-white dark:md:bg-gray-700 rounded-2xl md:rounded-2xl md:border md:border-gray-300 dark:md:border-gray-600 shadow-none md:shadow-lg w-full md:w-auto mx-auto">
         {/* Loop through each tool to render a button with icon and tooltip */}
         {tools.map(({ tool, Icon, name }) => (
           <Tooltip key={tool}>
@@ -50,7 +50,7 @@ const Toolbox = ({ onSelectTool, activeTool }) => {
               <Button
                 key={tool}
                 variant="outline"
-                className={`relative transition-all ${
+                className={`relative h-10 w-10 p-0 flex items-center justify-center transition-all duration-200 rounded-md ${
                   activeTool === tool
                     ? "bg-blue-500 dark:bg-blue-600 text-white shadow-lg border-blue-700 dark:border-white"
                     : "bg-white text-black dark:bg-gray-500 dark:text-white"
@@ -62,13 +62,15 @@ const Toolbox = ({ onSelectTool, activeTool }) => {
 
                 {/* Highlight border for active tool */}
                 {activeTool === tool && (
-                  <div className="absolute inset-0 border-2 border-blue-700 rounded-md"></div>
+                  <div className="absolute inset-0 border-2 border-blue-700 dark:border-white rounded-md pointer-events-none"></div>
                 )}
               </Button>
             </TooltipTrigger>
 
             {/* Tooltip content shows tool name on hover */}
-            <TooltipContent>{name}</TooltipContent>
+            <TooltipContent side="right" sideOffset={5}>
+              {name}
+            </TooltipContent>
           </Tooltip>
         ))}
       </div>
