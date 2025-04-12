@@ -1,8 +1,8 @@
-const express = require("express")
-const { createServer } = require("http")    //  Create an HTTP server
-const { Server } = require("socket.io")     // Import Socket.IO for WebSocket communication
-const cors = require("cors")
-const pool = require("./db")
+import express, { json } from "express"
+import { createServer } from "http"    //  Create an HTTP server
+import { Server } from "socket.io"     // Import Socket.IO for WebSocket communication
+import cors from "cors"
+// import pool from "./db"
 
 const app = express()   //  Initialize Express.js app
 const server = createServer(app)    //  Create an HTTP server
@@ -15,7 +15,7 @@ const io = new Server(server, {
 
 //  Middleware to enable CORS and JSON parsing
 app.use(cors())
-app.use(express.json())
+app.use(json())
 
 // Store redo history
 const userRedoStacks = new Map();
@@ -100,6 +100,10 @@ io.on("connection", (socket) => {
     socket.on("shape:live", (newLine) => {
         socket.broadcast.emit("shape:live", newLine)
     });
+
+    socket.on("shape:update", ({ id, updatedShape }) => {
+        socket.broadcast.emit("shape:update", { id, updatedShape })
+    })
 
     socket.on("text:start", (textObj) => {
         socket.broadcast.emit("text:start", textObj);

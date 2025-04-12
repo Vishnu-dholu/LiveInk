@@ -1,5 +1,6 @@
 
 import { createSlice } from "@reduxjs/toolkit";
+import { nanoid } from "@reduxjs/toolkit";
 
 const initialState = {
     lines: [],
@@ -10,6 +11,7 @@ const initialState = {
     currentLine: [],
     currentText: null,
     currentShape: null,
+    selectedShapeId: null,
 };
 
 const drawingSlice = createSlice({
@@ -23,8 +25,9 @@ const drawingSlice = createSlice({
             state.redoHistory = []; // Clear redo stack after new action
         },
         drawShape: (state, action) => {
+            const shape = { id: nanoid(), ...action.payload }
             state.undoHistory.push(getSnapshot(state))
-            state.shapes.push(action.payload)
+            state.shapes.push(shape)
             state.redoHistory = []
         },
         updateCurrentShape: (state, action) => {
@@ -131,6 +134,19 @@ const drawingSlice = createSlice({
                 state.shapes[index].y = y;
             }
         },
+
+        setSelectedShapeId: (state, action) => {
+            state.selectedShapeId = action.payload
+        },
+        updateShapeTransform: (state, action) => {
+            const { id, updatedShape } = action.payload;
+            const index = state.shapes.findIndex(shape => shape.id === id);
+            if (index === -1) {
+                console.warn("❌ Shape ID not found in Redux:", id);
+                return;
+            }
+            state.shapes[index] = { ...state.shapes[index], ...updatedShape };
+        },
     },
 });
 
@@ -164,6 +180,8 @@ export const {
     updateCurrentText,
     commitCurrentText,
     updateTextContent,
+    setSelectedShapeId,
+    updateShapeTransform
 } = drawingSlice.actions;
 
 export default drawingSlice.reducer;

@@ -1,4 +1,4 @@
-import { addLine, commitCurrentText, drawShape, removeLineAt, updateCurrentLine, updateCurrentShape, updateCurrentText, updateTextContent } from "@/store/drawingSlice";
+import { addLine, commitCurrentText, drawShape, removeLineAt, updateCurrentLine, updateCurrentShape, updateCurrentText, updateShapeTransform, updateTextContent } from "@/store/drawingSlice";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 
@@ -38,6 +38,10 @@ export const useSocketListeners = (socket) => {
         dispatch(removeLineAt(coords))
     }
 
+    const handleShapeUpdate = ({ id, updatedShape }) => {
+        dispatch(updateShapeTransform({ id, updatedShape }));
+    };
+
     useEffect(() => {
         if (!socket) return;
 
@@ -49,6 +53,7 @@ export const useSocketListeners = (socket) => {
         socket.on("text:update", handleTextUpdate)
         socket.on("text:commit", handleTextCommit)
         socket.on("erase", handleErase)
+        socket.on("shape:update", handleShapeUpdate)
 
         return () => {
             socket.off("draw", handleDraw)
@@ -59,6 +64,8 @@ export const useSocketListeners = (socket) => {
             socket.off("text:update", handleTextUpdate)
             socket.off("text:commit", handleTextCommit)
             socket.off("erase", handleErase)
+            socket.off("shape:update", handleShapeUpdate)
+
         }
     }, [socket, dispatch])
 }

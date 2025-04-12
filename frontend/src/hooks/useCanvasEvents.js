@@ -131,7 +131,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
             }
         } else if (["square", "rectangle", "circle"].includes(selectedTool)) {
             if (currentShape) {
-                const shapeWithTool = { ...currentShape, tool: selectedTool }
+                const shapeWithTool = { ...currentShape, id: uuidv4(), tool: selectedTool }
                 dispatch(drawShape(shapeWithTool));
                 socket.emit("drawShape", shapeWithTool);
                 dispatch(clearCurrentShape())

@@ -1,6 +1,8 @@
 // Import Rect (rectangle shape) component from react-konva
 import { socket } from "@/lib/socket";
-import { Rect, Circle } from "react-konva";
+import { setSelectedShapeId, updateShapeTransform } from "@/store/drawingSlice";
+import { useEffect, useRef } from "react";
+import { Rect, Circle, Transformer } from "react-konva";
 import { useDispatch, useSelector } from "react-redux";
 
 /**
@@ -10,37 +12,115 @@ import { useDispatch, useSelector } from "react-redux";
 const ShapeRenderer = ({ currentShape, selectedTool }) => {
   //  Get all finalized shapes from Redux store
   const shapes = useSelector((state) => state.drawing.shapes);
+  const selectedShapeId = useSelector((state) => state.drawing.selectedShapeId);
   const dispatch = useDispatch();
+
+  const transformerRef = useRef(null);
+  const shapeRefs = useRef([]);
+
+  useEffect(() => {
+    if (transformerRef.current && selectedShapeId !== null) {
+      const selectedNode = shapeRefs.current[selectedShapeId];
+
+      if (selectedNode) {
+        transformerRef.current.nodes([selectedNode]);
+        transformerRef.current.getLayer().batchDraw();
+      } else {
+        // Optional: helpful for debugging
+        console.warn(
+          "Transformer node not found for shape id",
+          selectedShapeId
+        );
+      }
+    }
+  }, [selectedShapeId, shapes]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        dispatch(setSelectedShapeId(null));
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [dispatch]);
 
   return (
     <>
+      <Rect
+        x={0}
+        y={0}
+        width={window.innerWidth}
+        height={window.innerHeight}
+        fill="transparent"
+        listening={true}
+        onMouseDown={() => {
+          if (selectedTool === "select") {
+            dispatch(setSelectedShapeId(null));
+          }
+        }}
+      />
       {/* Render all previously drawn shapes */}
       {shapes.map((shape, index) => {
-        if (shape.tool === "circle") {
-          return (
-            <Circle
-              key={index}
-              x={shape.x}
-              y={shape.y}
-              radius={shape.radius}
-              stroke="black"
-              strokeWidth={2}
-            />
-          );
-        } else {
-          return (
-            <Rect
-              key={index} //  Unique key for each shape
-              x={shape.x} //  Top-left x coordinate
-              y={shape.y} //  Top-left y coordinate
-              width={shape.width} //  Width of the rectangle
-              height={shape.height} //  Height of the rectangle
-              stroke="black"
-              strokeWidth={2}
-            />
-          );
-        }
+        const commonProps = {
+          x: shape.x,
+          y: shape.y,
+          stroke: "black",
+          strokeWidth: 2,
+          draggable: selectedTool === "select",
+          onClick: () => {
+            if (selectedTool === "select") dispatch(setSelectedShapeId(index));
+          },
+
+          onTransformEnd: (e) => {
+            const node = e.target;
+            const scaleX = node.scaleX();
+            const scaleY = node.scaleY();
+
+            const updatedShape = {
+              ...shape,
+              x: node.x(),
+              y: node.y(),
+              width: shape.width * scaleX,
+              height: shape.height * scaleY,
+            };
+
+            node.scaleX(1);
+            node.scaleY(1);
+
+            dispatch(updateShapeTransform({ id: shape.id, updatedShape }));
+            socket.emit("shape:update", { id: shape.id, updatedShape });
+          },
+
+          onDragEnd: (e) => {
+            const { x, y } = e.target.position();
+
+            const updatedShape = {
+              ...shape,
+              x,
+              y,
+            };
+
+            dispatch(updateShapeTransform({ id: shape.id, updatedShape }));
+            socket.emit("shape:update", { id: shape.id, updatedShape });
+          },
+
+          ref: (el) => (shapeRefs.current[index] = el),
+        };
+
+        return shape.tool === "circle" ? (
+          <Circle key={index} {...commonProps} radius={shape.radius} />
+        ) : (
+          <Rect
+            key={index}
+            {...commonProps}
+            width={shape.width}
+            height={shape.height}
+          />
+        );
       })}
+
+      {selectedShapeId !== null && <Transformer ref={transformerRef} />}
 
       {/* Render the shape currently beingn drawn */}
       {currentShape &&
@@ -55,8 +135,13 @@ const ShapeRenderer = ({ currentShape, selectedTool }) => {
             draggable={selectedTool === "select"}
             onDragEnd={(e) => {
               const { x, y } = e.target.position();
-              dispatch(updateShapePosition({ index, x, y }));
-              socket.emit("shape:update", { index, x, y });
+              const updatedShape = {
+                ...shapes[index],
+                x,
+                y,
+              };
+              dispatch(updateShapePosition({ index, updatedShape }));
+              socket.emit("shape:update", { index, updatedShape });
             }}
           />
         ) : (
