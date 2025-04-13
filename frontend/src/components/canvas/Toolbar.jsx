@@ -6,6 +6,8 @@ import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 import ZoomControls from "./ZoomControls";
+import { useDispatch, useSelector } from "react-redux";
+import { toggleGrid } from "@/store/drawingSlice";
 
 /**
  * Toolbar Component
@@ -21,6 +23,8 @@ const Toolbar = ({ onUndo, onRedo, onClear }) => {
   const [isDarkMode, setIsDarkMode] = useState(
     localStorage.getItem("theme") === "dark"
   );
+  const dispatch = useDispatch();
+  const showGrid = useSelector((state) => state.drawing.showGrid);
 
   //  Whenever dark mode state changes, apply/remove the `dark` class to the root element
   useEffect(() => {
@@ -83,6 +87,20 @@ const Toolbar = ({ onUndo, onRedo, onClear }) => {
 
       <div className="absolute top-4 right-4">
         <ZoomControls />
+      </div>
+
+      <div className="flex items-center space-x-2 mt-2 sm:mt-0">
+        <Label
+          htmlFor="show-grid-toggle"
+          className="text-gray-700 dark:text-gray-300"
+        >
+          Show Grid
+        </Label>
+        <Switch
+          id="show-grid-toggle"
+          checked={showGrid}
+          onCheckedChange={() => dispatch(toggleGrid())}
+        />
       </div>
     </div>
   );

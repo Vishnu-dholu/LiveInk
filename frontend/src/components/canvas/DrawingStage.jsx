@@ -37,6 +37,7 @@ const DrawingStage = ({
   const zoom = useSelector((state) => state.drawing.zoom);
   const stageX = useSelector((state) => state.drawing.scaleX);
   const stageY = useSelector((state) => state.drawing.scaleY);
+  const showGrid = useSelector((state) => state.drawing.showGrid);
 
   const width = window.innerWidth;
   const height = window.innerHeight;
@@ -65,7 +66,7 @@ const DrawingStage = ({
       onMouseMove={!isPanning ? handleMouseMove : undefined} //  Draw as the mouse moves
       onMouseUp={!isPanning ? handleMouseUp : undefined} //  Complete the drawing action
     >
-      <GridLayer width={10000} height={10000} />
+      {showGrid && <GridLayer width={10000} height={10000} />}
       <Layer>
         {/* Render all previous and current freehand lines  */}
         <LineRenderer lines={lines} currentLine={currentLine} />

@@ -15,6 +15,7 @@ const initialState = {
     zoom: 1,
     stageX: 0,
     stageY: 0,
+    showGrid: true,
 };
 
 const drawingSlice = createSlice({
@@ -157,6 +158,9 @@ const drawingSlice = createSlice({
         setStagePosition: (state, action) => {
             state.stageX = action.payload.x
             state.stageY = action.payload.y
+        },
+        toggleGrid: (state) => {
+            state.showGrid = !state.showGrid
         }
     },
 });
@@ -194,7 +198,8 @@ export const {
     setSelectedShapeId,
     updateShapeTransform,
     setZoom,
-    setStagePosition
+    setStagePosition,
+    toggleGrid
 } = drawingSlice.actions;
 
 export default drawingSlice.reducer;
