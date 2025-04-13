@@ -9,9 +9,12 @@ import TextRenderer from "./TextRenderer";
 // Custom hooks for handling canvas interactions
 import useCanvasEvents from "../../hooks/useCanvasEvents"; //  Manages mouse drawing events
 import useTextEditing from "../../hooks/useTextEditing"; //  Manages in-place text editing logic
+import { setStagePosition } from "@/store/drawingSlice";
 
 // Socket instance for real-time syncing
 import { socket } from "@/lib/socket";
+import { useDispatch, useSelector } from "react-redux";
+import GridLayer from "./GridLayer";
 
 const DrawingStage = ({
   stageRef, //  Ref to the Konva stage for accessing methods or dimensions
@@ -20,6 +23,7 @@ const DrawingStage = ({
   shapes, //  All saved shapes
   currentLine, //  The line currently being drawn
 }) => {
+  const dispatch = useDispatch();
   // Hook to manage mouse-based drawing logic (down, move, up)
   const { handleMouseDown, handleMouseMove, handleMouseUp, currentShape } =
     useCanvasEvents({ selectedTool, stageRef });
@@ -29,17 +33,39 @@ const DrawingStage = ({
     stageRef,
     socket
   );
+
+  const zoom = useSelector((state) => state.drawing.zoom);
+  const stageX = useSelector((state) => state.drawing.scaleX);
+  const stageY = useSelector((state) => state.drawing.scaleY);
+
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  const isPanning = selectedTool === "select";
+
+  const handleDragEnd = (e) => {
+    if (!isPanning) return;
+    dispatch(setStagePosition({ x: e.target.x(), y: e.target.y() }));
+  };
+
   return (
     <Stage
-      width={window.innerWidth * 0.8}
-      height={window.innerHeight * 0.8}
+      width={width}
+      height={height}
+      scaleX={zoom}
+      scaleY={zoom}
+      x={stageX}
+      y={stageY}
       ref={stageRef} //  Assign the stageRef so Konva APIs can be used
       className="rounded-lg bg-white dark:bg-gray-400"
-      style={{ borderRadius: "12px" }}
-      onMouseDown={handleMouseDown} //  Start drawing (line or shape)
-      onMouseMove={handleMouseMove} //  Draw as the mouse moves
-      onMouseUp={handleMouseUp} //  Complete the drawing action
+      draggable={isPanning}
+      onDragEnd={handleDragEnd}
+      style={{ borderRadius: "12px", cursor: isPanning ? "grab" : "crosshair" }}
+      onMouseDown={!isPanning ? handleMouseDown : undefined} //  Start drawing (line or shape)
+      onMouseMove={!isPanning ? handleMouseMove : undefined} //  Draw as the mouse moves
+      onMouseUp={!isPanning ? handleMouseUp : undefined} //  Complete the drawing action
     >
+      <GridLayer width={10000} height={10000} />
       <Layer>
         {/* Render all previous and current freehand lines  */}
         <LineRenderer lines={lines} currentLine={currentLine} />

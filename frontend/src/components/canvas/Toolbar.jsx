@@ -5,6 +5,7 @@ import { FaUndo, FaRedo, FaTrash } from "react-icons/fa";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
+import ZoomControls from "./ZoomControls";
 
 /**
  * Toolbar Component
@@ -78,6 +79,10 @@ const Toolbar = ({ onUndo, onRedo, onClear }) => {
           checked={isDarkMode}
           onCheckedChange={(checked) => setIsDarkMode(checked)}
         />
+      </div>
+
+      <div className="absolute top-4 right-4">
+        <ZoomControls />
       </div>
     </div>
   );

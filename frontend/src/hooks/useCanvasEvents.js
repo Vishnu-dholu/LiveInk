@@ -10,13 +10,27 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
     const currentLine = useSelector((state) => state.drawing.currentLine);
     const currentText = useSelector((state) => state.drawing.currentText);
     const currentShape = useSelector((state) => state.drawing.currentShape);
+    const zoom = useSelector(state => state.drawing.zoom);
 
     const [isMouseDown, setIsMouseDown] = useState(false);
 
     // Utility: Get current mouse pointer position relative to canvas
     const getPointerPosition = () => {
         const stage = stageRef.current?.getStage()
-        return stage?.getPointerPosition()
+        const pos = stage?.getPointerPosition()
+
+        if (!stage || !pos) return { x: 0, y: 0 }
+
+        const stagePos = {
+            x: stage.x(),
+            y: stage.y(),
+        };
+
+
+        return {
+            x: (pos.x - stagePos.x) / stage.scaleX(),
+            y: (pos.y - stagePos.y) / stage.scaleY(),
+        }
     }
 
     // Check of user clicked inside an existing text area

@@ -12,6 +12,9 @@ const initialState = {
     currentText: null,
     currentShape: null,
     selectedShapeId: null,
+    zoom: 1,
+    stageX: 0,
+    stageY: 0,
 };
 
 const drawingSlice = createSlice({
@@ -147,6 +150,14 @@ const drawingSlice = createSlice({
             }
             state.shapes[index] = { ...state.shapes[index], ...updatedShape };
         },
+
+        setZoom: (state, action) => {
+            state.zoom = action.payload
+        },
+        setStagePosition: (state, action) => {
+            state.stageX = action.payload.x
+            state.stageY = action.payload.y
+        }
     },
 });
 
@@ -181,7 +192,9 @@ export const {
     commitCurrentText,
     updateTextContent,
     setSelectedShapeId,
-    updateShapeTransform
+    updateShapeTransform,
+    setZoom,
+    setStagePosition
 } = drawingSlice.actions;
 
 export default drawingSlice.reducer;

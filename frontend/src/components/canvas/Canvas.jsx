@@ -24,8 +24,6 @@ const Canvas = () => {
   const dispatch = useDispatch();
   // Ref to the Konva stage element
   const stageRef = useRef();
-  // Local UI state foor toggling mobile toolbox visibilty
-  const [isToolboxVisible, setIsToolboxVisible] = useState(false);
   // Tracks the currently selected drawing tool
   const [selectedTool, setSelectedTool] = useState("pencil");
 
