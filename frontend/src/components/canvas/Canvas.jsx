@@ -14,10 +14,14 @@ import {
   clearCanvas,
   updateCurrentLine,
   updateCurrentShape,
+  setStagePosition,
 } from "@/store/drawingSlice";
 // Socket instance for real-time collaboration
 import { socket } from "@/lib/socket";
 import { useSocketListeners } from "@/hooks/useSocketListeners";
+
+const virtualCanvasWidth = 10000;
+const virtualCanvasHeight = 10000;
 
 const Canvas = () => {
   useSocketListeners(socket);
@@ -33,6 +37,21 @@ const Canvas = () => {
   const shapes = useSelector((state) => state.drawing.shapes);
   // Redux state: the current line being drawn (live)
   const currentLine = useSelector((state) => state.drawing.currentLine);
+  const zoom = useSelector((state) => state.drawing.zoom);
+
+  useEffect(() => {
+    const centerStage = () => {
+      const screenWidth = window.innerWidth;
+      const screenHeight = window.innerHeight;
+
+      const offsetX = screenWidth / 2 - (virtualCanvasWidth * zoom) / 2;
+      const offsetY = screenHeight / 2 - (virtualCanvasHeight * zoom) / 2;
+
+      dispatch(setStagePosition({ x: offsetX, y: offsetY }));
+    };
+
+    centerStage();
+  }, []);
 
   // Handler for tool selection from toolbox
   const handleSelectTool = (tool) => setSelectedTool(tool);

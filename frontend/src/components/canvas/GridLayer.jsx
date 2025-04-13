@@ -3,32 +3,43 @@ import { useSelector } from "react-redux";
 
 const GridLayer = ({ width, height, gridSize = 50 }) => {
   const zoom = useSelector((state) => state.drawing.zoom);
+  const stageX = useSelector((state) => state.drawing.stageX);
+  const stageY = useSelector((state) => state.drawing.stageY);
+
   const scaledGridSize = gridSize * zoom;
 
   const verticalLines = [];
-  for (let i = 0; i < width / scaledGridSize; i++) {
+  const horizontalLines = [];
+
+  // Calculate where the first vertical line should start based on pan
+  const startX = -stageX % scaledGridSize;
+  const startY = -stageY % scaledGridSize;
+
+  for (let x = startX; x < width; x += scaledGridSize) {
     verticalLines.push(
       <Line
-        key={`v-${i}`}
-        points={[i * scaledGridSize, 0, i * scaledGridSize, height]}
+        key={`v-${x}`}
+        points={[x, 0, x, height]}
         stroke="#e0e0e0"
         strokeWidth={1}
       />
     );
   }
 
-  const HorizontalLines = [];
-  for (let i = 0; i < height / scaledGridSize; i++) {
-    HorizontalLines.push(
+  for (let y = startY; y < height; y += scaledGridSize) {
+    horizontalLines.push(
       <Line
-        key={`h-${i}`}
-        points={[0, i * scaledGridSize, width, i * scaledGridSize]}
+        key={`h-${y}`}
+        points={[0, y, width, y]}
         stroke="#e0e0e0"
         strokeWidth={1}
       />
     );
   }
-  return <Layer>{[...verticalLines, ...HorizontalLines]}</Layer>;
+
+  return (
+    <Layer listening={false}>{[...verticalLines, ...horizontalLines]}</Layer>
+  );
 };
 
 export default GridLayer;
