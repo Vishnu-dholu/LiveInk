@@ -1,6 +1,10 @@
 // Import Rect (rectangle shape) component from react-konva
 import { socket } from "@/lib/socket";
-import { setSelectedShapeId, updateShapeTransform } from "@/store/drawingSlice";
+import {
+  setSelectedShapeId,
+  updateShapeTransform,
+  updateShapePosition,
+} from "@/store/drawingSlice";
 import { useEffect, useRef } from "react";
 import { Rect, Circle, Transformer } from "react-konva";
 import { useDispatch, useSelector } from "react-redux";
@@ -10,14 +14,17 @@ import { useDispatch, useSelector } from "react-redux";
  * (like reactangles) as well as a live preview of the currently being drawn.
  */
 const ShapeRenderer = ({ currentShape, selectedTool }) => {
+  const dispatch = useDispatch();
+
   //  Get all finalized shapes from Redux store
   const shapes = useSelector((state) => state.drawing.shapes);
   const selectedShapeId = useSelector((state) => state.drawing.selectedShapeId);
-  const dispatch = useDispatch();
 
+  // Refs for Transformer and shape instances
   const transformerRef = useRef(null);
   const shapeRefs = useRef([]);
 
+  // Attach Transformer to the selected shape
   useEffect(() => {
     if (transformerRef.current && selectedShapeId !== null) {
       const selectedNode = shapeRefs.current[selectedShapeId];
@@ -35,6 +42,7 @@ const ShapeRenderer = ({ currentShape, selectedTool }) => {
     }
   }, [selectedShapeId, shapes]);
 
+  // Deselect shape on Escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
@@ -47,6 +55,7 @@ const ShapeRenderer = ({ currentShape, selectedTool }) => {
 
   return (
     <>
+      {/* Transparent rect for catching deselection clicks */}
       <Rect
         x={0}
         y={0}
@@ -85,6 +94,7 @@ const ShapeRenderer = ({ currentShape, selectedTool }) => {
               height: shape.height * scaleY,
             };
 
+            // Reset transform scale after applying
             node.scaleX(1);
             node.scaleY(1);
 
@@ -120,6 +130,7 @@ const ShapeRenderer = ({ currentShape, selectedTool }) => {
         );
       })}
 
+      {/* Add Transformer for the selected shape */}
       {selectedShapeId !== null && <Transformer ref={transformerRef} />}
 
       {/* Render the shape currently beingn drawn */}

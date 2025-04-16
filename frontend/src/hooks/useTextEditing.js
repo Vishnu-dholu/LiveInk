@@ -9,24 +9,27 @@ import { v4 as uuidv4 } from "uuid";
 
 /**
  * Custom hook to handle text creation, editing and committing logic
- * inside the collaborative canvas using Konva and Redux
+ * inside the collaborative canvas environment using Konva and Redux
  */
 const useTextEditing = (stageRef, socket) => {
     const dispatch = useDispatch();
 
-    // Redux state selectors
+    // Selects the text array and currently edited text from global Redux state
     const texts = useSelector((state) => state.drawing.texts);
     const currentText = useSelector((state) => state.drawing.currentText);
 
     // Local UI states for text editing
-    const [isEditingText, setIsEditingText] = useState(false);
-    const [editTextProps, setEditTextProps] = useState(null);
+    const [isEditingText, setIsEditingText] = useState(false);      //  Flag to show if user is editing
+    const [editTextProps, setEditTextProps] = useState(null);       //  Stores properties of text being edited
 
     /**
      * Called when the canvas is clicked using the "Text" tool.
      * Adds a new text element if the click isn't over existing text.
+     * @param {Object} pointerPos - Current mouse pointer position.
+     * @param {Object} selectedTool - Active drawing tool.
      */
     const handleAddText = (pointerPos, selectedTool) => {
+        // Check if the click overlaps with any existing text
         const clickedOnText = texts.some((t) => {
             const textWidth = t.text.length * (t.fontSize * 0.6);
             const textHeight = t.fontSize;
@@ -38,11 +41,13 @@ const useTextEditing = (stageRef, socket) => {
             );
         });
 
+        // If tool is "text", click is not over existing text, and no active text
         if (
             selectedTool === "text" &&
             !clickedOnText &&
             (!currentText || !currentText.text)
         ) {
+            // Create a new text object
             const newText = {
                 id: uuidv4(),
                 x: pointerPos.x,
@@ -69,7 +74,7 @@ const useTextEditing = (stageRef, socket) => {
 
     /**
      * Called when user double-clicks on a text node.
-     * Creates a native textarea overlay for editing.
+     * Creates and positions a native textarea over the canvas for live editing.
      */
     const handleEditText = (textObj) => {
         setIsEditingText(true);
@@ -78,10 +83,12 @@ const useTextEditing = (stageRef, socket) => {
         const stage = stageRef.current?.getStage();
         if (!stage) return;
 
+        // Find the Konva Text node on stage using its ID
         const textNode = stage.findOne(`#${textObj.id}`);
-        const textRect = textNode.getClientRect();
-        const stageBox = stage.container().getBoundingClientRect();
+        const textRect = textNode.getClientRect();                      //  Get bounding box
+        const stageBox = stage.container().getBoundingClientRect();     //  Get canvas DOM box
 
+        // Calculate position of textarea in DOM space
         const areaPosition = {
             x: stageBox.left + textRect.x,
             y: stageBox.top + textRect.y,
@@ -116,7 +123,7 @@ const useTextEditing = (stageRef, socket) => {
         });
 
         document.body.appendChild(textarea);
-        textarea.focus();
+        textarea.focus();   //  Focus input for typing
 
         // Resize textarea dynamically based on content
         const resizeTextarea = () => {
@@ -143,11 +150,12 @@ const useTextEditing = (stageRef, socket) => {
                 dispatch(updateTextContent({ id: textObj.id, text: textarea.value }));
                 socket.emit("text:update", { id: textObj.id, text: textarea.value });
             }
-            document.body.removeChild(textarea);
-            setIsEditingText(false);
+            document.body.removeChild(textarea);    //  Clean up textarea
+            setIsEditingText(false);                //  Exit editing mode
         });
     };
 
+    // Return hook API for use in components
     return {
         handleAddText,
         handleEditText,

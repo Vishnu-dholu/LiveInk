@@ -1,7 +1,13 @@
 import { Layer, Line } from "react-konva";
 import { useSelector } from "react-redux";
 
+/**
+ *  GridLayer component overlays a grid background on the canvas.
+ *  It dynamically adjusts according to zoom and pan to create
+ *  an infinite-scrolling grid experience.
+ */
 const GridLayer = ({ width, height, gridSize = 50 }) => {
+  // Get zoom and stage position from Redux state
   const zoom = useSelector((state) => state.drawing.zoom);
   const stageX = useSelector((state) => state.drawing.stageX);
   const stageY = useSelector((state) => state.drawing.stageY);
@@ -15,6 +21,7 @@ const GridLayer = ({ width, height, gridSize = 50 }) => {
   const startX = -stageX % scaledGridSize;
   const startY = -stageY % scaledGridSize;
 
+  // Generate vertical grid lines
   for (let x = startX; x < width; x += scaledGridSize) {
     verticalLines.push(
       <Line
@@ -26,6 +33,7 @@ const GridLayer = ({ width, height, gridSize = 50 }) => {
     );
   }
 
+  // Generate horizontal grid lines
   for (let y = startY; y < height; y += scaledGridSize) {
     horizontalLines.push(
       <Line
@@ -38,6 +46,7 @@ const GridLayer = ({ width, height, gridSize = 50 }) => {
   }
 
   return (
+    // The grid is static and doesn't receive pointer events
     <Layer listening={false}>{[...verticalLines, ...horizontalLines]}</Layer>
   );
 };

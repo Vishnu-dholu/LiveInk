@@ -4,41 +4,54 @@ import { v4 as uuidv4 } from "uuid";
 import { addLine, drawShape, updateCurrentLine, removeLineAt, updateCurrentText, commitCurrentText, updateCurrentShape, clearCurrentShape } from "@/store/drawingSlice";
 import { socket } from "@/lib/socket";
 
+/**
+ *  Custom hook that handles all mouse events on the canvas
+ * and dispatches appropriate Redux actions or emit socket events.
+ */
 const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
     const dispatch = useDispatch()
+    // Redux state
     const texts = useSelector((state) => state.drawing.texts);
     const currentLine = useSelector((state) => state.drawing.currentLine);
     const currentText = useSelector((state) => state.drawing.currentText);
     const currentShape = useSelector((state) => state.drawing.currentShape);
-    const zoom = useSelector(state => state.drawing.zoom);
 
-    const [isMouseDown, setIsMouseDown] = useState(false);
+    const [isMouseDown, setIsMouseDown] = useState(false);  //  Track if mouse is being held down
 
-    // Utility: Get current mouse pointer position relative to canvas
+    /**
+     *  Calculates the current pointer position relative to canvas,
+     * accounting for zoom and canvas position.
+     */
     const getPointerPosition = () => {
-        const stage = stageRef.current?.getStage()
-        const pos = stage?.getPointerPosition()
+        const stage = stageRef.current?.getStage()  //  Get Konva stage instance
+        const pos = stage?.getPointerPosition()     //  Mouse position in screen coords
 
         if (!stage || !pos) return { x: 0, y: 0 }
 
         const stagePos = {
-            x: stage.x(),
-            y: stage.y(),
+            x: stage.x(),   //  X position of the stage
+            y: stage.y(),   //  Y position of the stage
         };
 
-
+        // Return pointer position relative to canvas scale and translation
         return {
             x: (pos.x - stagePos.x) / stage.scaleX(),
             y: (pos.y - stagePos.y) / stage.scaleY(),
         }
     }
 
-    // Check of user clicked inside an existing text area
+    /**
+     *  Mouse down event - determines what to start drawing or editing
+     * depending on the selected tool and pointer position.
+     */
     const handleMouseDown = () => {
         const pos = getPointerPosition()
         setIsMouseDown(true);
+
+        // Prevent interaction while editing text
         if (isEditingText) return;
 
+        // Check if user clicked on existing text element
         const clickedOnText = texts.some((t) => {
             const textWidth = t.text.length * (t.fontSize * 0.6);
             const textHeight = t.fontSize;
@@ -50,6 +63,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
             );
         });
 
+        // Handle tool-specific actions
         if (selectedTool === "pen" || selectedTool === "pencil") {
             dispatch(updateCurrentLine([pos.x, pos.y])); // Start drawing
         } else if (["square", "rectangle"].includes(selectedTool)) {
@@ -63,6 +77,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
             !clickedOnText &&
             !currentText?.text && !isEditingText
         ) {
+            // If clicked on blank space, start a new text box
             const newText = {
                 id: uuidv4(),
                 x: pos.x,
@@ -79,18 +94,23 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
         }
     };
 
+    /**
+     *  Mouse move event - updates the currently drawn shape/line as user drags
+     */
     const handleMouseMove = () => {
         if (!isMouseDown) return;
 
         const pos = getPointerPosition()
 
         if (selectedTool === "pen" || selectedTool === "pencil") {
+            // Draw live line by appending new point
             if (currentLine.length > 0) {
                 const updatedLine = [...currentLine, pos.x, pos.y]
                 dispatch(updateCurrentLine(updatedLine));
                 socket.emit("draw:live", updatedLine)
             }
         } else if (selectedTool === "square" && currentShape) {
+            // Keep shape a square by taking max distance
             const size = Math.max(
                 Math.abs(pos.x - currentShape.x),
                 Math.abs(pos.y - currentShape.y)
@@ -103,6 +123,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
             dispatch(updateCurrentShape(updatedShape));
             socket.emit("shape:live", updatedShape)
         } else if (selectedTool === "rectangle" && currentShape) {
+            // Update rectangle width/height
             const updatedShape = {
                 ...currentShape,
                 width: pos.x - currentShape.x,
@@ -111,10 +132,12 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
             dispatch(updateCurrentShape(updatedShape));
             socket.emit("shape:live", updatedShape)
         } else if (selectedTool === "eraser") {
+            // Erase  as user moves
             dispatch(removeLineAt({ x: pos.x, y: pos.y }));
             socket.emit("erase", { x: pos.x, y: pos.y });
         }
         else if (selectedTool === "circle" && currentShape) {
+            // Calculate radius using distance formula
             const dx = pos.x - currentShape.x;
             const dy = pos.y - currentShape.y;
             const radius = Math.sqrt(dx * dx + dy * dy);
@@ -127,9 +150,13 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
         }
     };
 
+    /**
+     * Mouse up event - finalize the shape, line or text
+     */
     const handleMouseUp = () => {
         setIsMouseDown(false);
 
+        // Finalize freehand drawing
         if (selectedTool === "pen" || selectedTool === "pencil") {
             if (currentLine.length > 0) {
                 const newLine = {
@@ -144,6 +171,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
                 dispatch(updateCurrentLine([])); // Reset for next stroke
             }
         } else if (["square", "rectangle", "circle"].includes(selectedTool)) {
+            // Finalize and commit shape to Redux + socket
             if (currentShape) {
                 const shapeWithTool = { ...currentShape, id: uuidv4(), tool: selectedTool }
                 dispatch(drawShape(shapeWithTool));
@@ -151,6 +179,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
                 dispatch(clearCurrentShape())
             }
         } else if (selectedTool === "text" && currentText) {
+            // Commit current text to Redux and socket
             const committedText = { ...currentText };
             dispatch(commitCurrentText());
             socket.emit("text:commit", committedText);

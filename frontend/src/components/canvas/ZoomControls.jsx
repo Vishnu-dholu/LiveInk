@@ -2,15 +2,21 @@ import { setZoom } from "@/store/drawingSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { Button } from "../ui/button";
 
+/**
+ *  ZoomControls component provides UI to zoom in/out and reset zoom level.
+ *  It adjusts the zoom level in the Redux store and updates the canvas view.
+ */
 const ZoomControls = () => {
   const dispatch = useDispatch();
   const zoom = useSelector((state) => state.drawing.zoom);
 
+  // Handles zoom increment/decrement within a defined range
   const handleZoom = (factor) => {
     const newZoom = Math.max(0.2, Math.min(zoom + factor, 3));
     dispatch(setZoom(newZoom));
   };
 
+  // Resets zoom level to default (100%)
   const handleReset = () => {
     dispatch(setZoom(1));
   };

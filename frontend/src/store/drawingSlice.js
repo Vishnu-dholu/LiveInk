@@ -3,19 +3,19 @@ import { createSlice } from "@reduxjs/toolkit";
 import { nanoid } from "@reduxjs/toolkit";
 
 const initialState = {
-    lines: [],
-    shapes: [],
-    texts: [],
-    undoHistory: [],
-    redoHistory: [],
-    currentLine: [],
-    currentText: null,
-    currentShape: null,
-    selectedShapeId: null,
-    zoom: 1,
-    stageX: 0,
-    stageY: 0,
-    showGrid: true,
+    lines: [],              //  Stores drawn lines
+    shapes: [],             //  Stores shapes (circle, rect, etc.)
+    texts: [],              //  Stores text elements
+    undoHistory: [],        //  Stack to track previous states (for undo)
+    redoHistory: [],        //  Stack to track undone states (for redo)
+    currentLine: [],        //  Temporarily holds the line being drawn
+    currentText: null,      //  Temporarily holds text being edited
+    currentShape: null,     //  Temporarily holds shape being drawn
+    selectedShapeId: null,  //  ID of currently selected shape
+    zoom: 1,                //  Current zoom level
+    stageX: 0,              //  X scroll position of canvas
+    stageY: 0,              //  Y scroll position of canvas
+    showGrid: true,         // Toggle to show/hide canvas gride
 };
 
 const drawingSlice = createSlice({
@@ -23,39 +23,51 @@ const drawingSlice = createSlice({
     initialState,
     reducers: {
         // ----- LINE & SHAPE LOGIC -----
+        // Adds a new line to the canvas
         addLine: (state, action) => {
-            state.undoHistory.push(getSnapshot(state)); // Save current state for undo
-            state.lines.push(action.payload); // Add new line
-            state.redoHistory = []; // Clear redo stack after new action
+            state.undoHistory.push(getSnapshot(state));     // Save current state for undo
+            state.lines.push(action.payload);               // Add new line
+            state.redoHistory = [];                         // Clear redo stack after new action
         },
+
+        // Adds a shape with a unique ID
         drawShape: (state, action) => {
             const shape = { id: nanoid(), ...action.payload }
             state.undoHistory.push(getSnapshot(state))
             state.shapes.push(shape)
             state.redoHistory = []
         },
+
+        // Temporarily sets the current shape being drawn (used during interaction)
         updateCurrentShape: (state, action) => {
             state.currentShape = action.payload
         },
+
+        // Clears the currently drawn shape once finalized
         clearCurrentShape: (state) => {
             state.currentShape = null
         },
 
         // ----- UNDO / REDO / CLEAR -----
+        // Undo last action by restoring previous state
         undoAction: (state) => {
             if (state.undoHistory.length > 0) {
-                const prevState = state.undoHistory.pop()
-                state.redoHistory.push(getSnapshot(state));
-                restoreSnapshot(state, prevState)
+                const prevState = state.undoHistory.pop()       //  Get previous snapshot
+                state.redoHistory.push(getSnapshot(state));     //  Save current for redo
+                restoreSnapshot(state, prevState)               //  Restore to previous
             }
         },
+
+        // Redo the last undone action
         redoAction: (state) => {
             if (state.redoHistory.length > 0) {
-                const redoState = state.redoHistory.pop();
-                state.undoHistory.push(getSnapshot(state));
-                restoreSnapshot(state, redoState)
+                const redoState = state.redoHistory.pop();      //  Get next state
+                state.undoHistory.push(getSnapshot(state));     //  Save current for undo
+                restoreSnapshot(state, redoState)               //  Restore redo state
             }
         },
+
+        // Clears the canvas and saves the current snapshot to undoHistory
         clearCanvas: (state) => {
             state.undoHistory.push({
                 lines: [...state.lines],
@@ -69,6 +81,7 @@ const drawingSlice = createSlice({
         },
 
         // ----- LINE ERASER -----
+        // Removes a segment of a line near a specific (x, y) point
         removeLineAt: (state, action) => {
             const { x, y } = action.payload
             const threshold = 10    // Eraser sensitivity
@@ -81,27 +94,36 @@ const drawingSlice = createSlice({
                         const lineX = line.points[i];
                         const lineY = line.points[i + 1];
 
+                        // Only keep points that are not close to the erase point
                         if (Math.abs(lineX - x) >= threshold || Math.abs(lineY - y) >= threshold) {
                             newPoints.push(lineX, lineY);
                         }
                     }
+                    // Return updated line only if it still has more than one point
                     return newPoints.length > 2 ? { ...line, points: newPoints } : null;
                 })
-                .filter(Boolean);
+                .filter(Boolean);   //  Remove null entries
         },
+
+        // Updates the currently drawing line (real-time drawing)
         updateCurrentLine: (state, action) => {
             state.currentLine = action.payload;
         },
 
         // ----- TEXT LOGIC -----
+        // Adds a text element to the canvas
         addText: (state, action) => {
             state.undoHistory.push(getSnapshot(state))
             state.texts.push(action.payload)
             state.redoHistory = []
         },
+
+        // Sets the currently editing text element
         updateCurrentText: (state, action) => {
             state.currentText = action.payload
         },
+
+        // Finalizes and commits the current text to the canvas
         commitCurrentText: (state) => {
             if (state.currentText) {
                 state.undoHistory.push(getSnapshot(state))
@@ -110,6 +132,8 @@ const drawingSlice = createSlice({
                 state.redoHistory = []
             }
         },
+
+        // Updates the content of a specific text element
         updateTextContent: (state, action) => {
             state.undoHistory.push(getSnapshot(state));
             const { id, text } = action.payload
@@ -117,6 +141,8 @@ const drawingSlice = createSlice({
             if (target) target.text = text
         },
 
+        // ------- POSITION UPDATES -------
+        // Updates position of a line by translating each point
         updateLinePosition: (state, action) => {
             const { index, x, y } = action.payload
             const line = state.lines[index]
@@ -131,6 +157,8 @@ const drawingSlice = createSlice({
                 line.points = newPoints
             }
         },
+
+        // Updates shape's X and Y position
         updateShapePosition: (state, action) => {
             const { index, x, y } = action.payload;
             if (state.shapes[index]) {
@@ -139,9 +167,13 @@ const drawingSlice = createSlice({
             }
         },
 
+        // ------- SHAPE TRANSFORM -------
+        // Sets the currently selected shape (used for transforms)
         setSelectedShapeId: (state, action) => {
             state.selectedShapeId = action.payload
         },
+
+        // Updates transformation (position/scale/rotation) of a shape by ID
         updateShapeTransform: (state, action) => {
             const { id, updatedShape } = action.payload;
             const index = state.shapes.findIndex(shape => shape.id === id);
@@ -152,20 +184,28 @@ const drawingSlice = createSlice({
             state.shapes[index] = { ...state.shapes[index], ...updatedShape };
         },
 
+        // -------VIEWPORT CONTROLS -------
+        // Sets the zoom level of the canvas
         setZoom: (state, action) => {
             state.zoom = action.payload
         },
+
+        // Sets the X/Y position of the stage (canvas viewport)
         setStagePosition: (state, action) => {
             state.stageX = action.payload.x
             state.stageY = action.payload.y
         },
+
+        // Toggles the background grid visibility
         toggleGrid: (state) => {
             state.showGrid = !state.showGrid
         }
     },
 });
 
-// Helper to take a snapshot of current drawable state
+// ------- SNAPSHOT HELPERS -------
+
+// Creates a shallow copy of drawable elements for undo/redo
 function getSnapshot(state) {
     return {
         lines: [...state.lines],
@@ -174,7 +214,7 @@ function getSnapshot(state) {
     }
 }
 
-// Helper to restore a snapshot into current state
+// Restores a previous drawable state
 function restoreSnapshot(state, snapshot) {
     state.lines = snapshot.lines || [];
     state.shapes = snapshot.shapes || [];
@@ -197,6 +237,7 @@ export const {
     updateTextContent,
     setSelectedShapeId,
     updateShapeTransform,
+    updateShapePosition,
     setZoom,
     setStagePosition,
     toggleGrid

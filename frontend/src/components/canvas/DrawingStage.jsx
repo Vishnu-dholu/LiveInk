@@ -22,6 +22,7 @@ const DrawingStage = ({
   lines, //  All saved freehand lines
   shapes, //  All saved shapes
   currentLine, //  The line currently being drawn
+  zoom,
 }) => {
   const dispatch = useDispatch();
   // Hook to manage mouse-based drawing logic (down, move, up)
@@ -34,7 +35,6 @@ const DrawingStage = ({
     socket
   );
 
-  const zoom = useSelector((state) => state.drawing.zoom);
   const stageX = useSelector((state) => state.drawing.scaleX);
   const stageY = useSelector((state) => state.drawing.scaleY);
   const showGrid = useSelector((state) => state.drawing.showGrid);
@@ -44,6 +44,7 @@ const DrawingStage = ({
 
   const isPanning = selectedTool === "select";
 
+  // Update stage position when dragging ends (only in select mode)
   const handleDragEnd = (e) => {
     if (!isPanning) return;
     dispatch(setStagePosition({ x: e.target.x(), y: e.target.y() }));

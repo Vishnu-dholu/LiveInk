@@ -14,6 +14,16 @@ const LineRenderer = () => {
   // Currently selected tool
   const selectedTool = useSelector((state) => state.drawing.selectedTool);
 
+  // Helper function to determine line style based on tool
+  const getLineProps = (tool) => {
+    return {
+      tension: tool === "pen" ? 0.5 : 0.2, //  Smoothing factor: pen is smoother
+      dash: tool === "pencil" ? [5, 5] : [], //  Dashed effect for pencil
+      strokeWidth: tool === "pen" ? 3 : 1.8, //  Thickness based on tool
+      stroke: tool === "pen" ? "black" : "#353839", // Stroke color based on tool
+    };
+  };
+
   return (
     <>
       {/* Render each completed line from the Redux store */}
@@ -35,12 +45,9 @@ const LineRenderer = () => {
         <Line
           key="current-line"
           points={currentLine} //  Points array of current line in progress
-          stroke={selectedTool === "pen" ? "black" : "#353839"} // Stroke color based on tool
-          strokeWidth={selectedTool === "pen" ? 3 : 1.8} //  Thickness based on tool
-          tension={selectedTool === "pen" ? 0.5 : 0.2} //  Tension (smoothness)
+          {...getLineProps(selectedTool)} //  Dynamic styling based on tool
           lineCap="round"
           lineJoin="round"
-          dash={selectedTool === "pencil" ? [5, 5] : []} // Dashed for pencil, solid otherwise
         />
       )}
     </>

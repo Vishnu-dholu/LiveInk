@@ -1,12 +1,12 @@
 // Importing React hooks and necessary functions
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 // UI components
 import Toolbar from "./Toolbar"; //  Top-bar with undo, redo, clear
 import Toolbox from "./Toolbox"; //  Side toolbox with drawing tools
-import { Menu } from "lucide-react"; //  Icon component used for mobile menu button
 import DrawingStage from "./DrawingStage"; //  The Konva canvas rendering layer
+
 // Redux actions for undo, redo and clearing canvas
 import {
   undoAction,
@@ -20,16 +20,16 @@ import {
 import { socket } from "@/lib/socket";
 import { useSocketListeners } from "@/hooks/useSocketListeners";
 
+// Constants for large virtual canvas
 const virtualCanvasWidth = 10000;
 const virtualCanvasHeight = 10000;
 
 const Canvas = () => {
-  useSocketListeners(socket);
   const dispatch = useDispatch();
   // Ref to the Konva stage element
   const stageRef = useRef();
   // Tracks the currently selected drawing tool
-  const [selectedTool, setSelectedTool] = useState("pencil");
+  const [selectedTool, setSelectedTool] = useState("select");
 
   // Redux state: all drawn lines
   const lines = useSelector((state) => state.drawing.lines);
@@ -39,19 +39,24 @@ const Canvas = () => {
   const currentLine = useSelector((state) => state.drawing.currentLine);
   const zoom = useSelector((state) => state.drawing.zoom);
 
+  // Register socket listeners (text, drawing, undo, etc.)
+  useSocketListeners(socket);
+
+  const centerStage = useCallback(() => {
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+
+    const offsetX = screenWidth / 2 - (virtualCanvasWidth * zoom) / 2;
+    const offsetY = screenHeight / 2 - (virtualCanvasHeight * zoom) / 2;
+
+    dispatch(setStagePosition({ x: offsetX, y: offsetY }));
+  }, [zoom, dispatch]);
+
   useEffect(() => {
-    const centerStage = () => {
-      const screenWidth = window.innerWidth;
-      const screenHeight = window.innerHeight;
-
-      const offsetX = screenWidth / 2 - (virtualCanvasWidth * zoom) / 2;
-      const offsetY = screenHeight / 2 - (virtualCanvasHeight * zoom) / 2;
-
-      dispatch(setStagePosition({ x: offsetX, y: offsetY }));
-    };
-
     centerStage();
-  }, []);
+    window.addEventListener("resize", centerStage);
+    return () => window.removeEventListener("resize", centerStage);
+  }, [centerStage]);
 
   // Handler for tool selection from toolbox
   const handleSelectTool = (tool) => setSelectedTool(tool);
@@ -79,38 +84,6 @@ const Canvas = () => {
     dispatch(updateCurrentShape([]));
     socket.emit("clear");
   };
-
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleRemoteUndo = () => {
-      dispatch(undoAction());
-      dispatch(updateCurrentLine([]));
-      dispatch(updateCurrentShape([]));
-    };
-
-    const handleRemoteRedo = () => {
-      dispatch(redoAction());
-      dispatch(updateCurrentLine([]));
-      dispatch(updateCurrentShape([]));
-    };
-
-    const handleRemoteClear = () => {
-      dispatch(clearCanvas());
-      dispatch(updateCurrentLine([]));
-      dispatch(updateCurrentShape([]));
-    };
-
-    socket.on("undo", handleRemoteUndo);
-    socket.on("redo", handleRemoteRedo);
-    socket.on("clear", handleRemoteClear);
-
-    return () => {
-      socket.off("undo", handleRemoteUndo);
-      socket.off("redo", handleRemoteRedo);
-      socket.off("clear", handleRemoteClear);
-    };
-  }, [dispatch]);
 
   return (
     <div className="flex flex-col md:flex-row h-full w-full bg-gray-300 dark:bg-gray-900 overflow-hidden relative">
@@ -143,6 +116,7 @@ const Canvas = () => {
             lines={lines} //  All saved lines
             shapes={shapes} //  All saved shapes
             currentLine={currentLine} //  Line currently being drawn
+            zoom={zoom}
           />
         </div>
       </div>
