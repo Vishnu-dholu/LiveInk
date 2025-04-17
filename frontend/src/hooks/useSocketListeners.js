@@ -1,6 +1,7 @@
-import { addLine, commitCurrentText, drawShape, removeLineAt, updateCurrentLine, updateCurrentShape, updateCurrentText, updateShapeTransform, updateTextContent } from "@/store/drawingSlice";
+import { addLine, clearCurrentShape, commitCurrentText, drawShape, removeLineAt, updateCurrentLine, updateCurrentShape, updateCurrentText, updateShapeTransform, updateTextContent } from "@/store/drawingSlice";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
+import { clearCanvas, redoAction, undoAction } from "../store/drawingSlice";
 
 /**
  *  Custom hook to handle all incoming socket events
@@ -33,6 +34,7 @@ export const useSocketListeners = (socket) => {
      */
     const handleShape = (shape) => {
         dispatch(drawShape(shape))
+        dispatch(clearCurrentShape())
     }
 
     /**
@@ -143,5 +145,5 @@ export const useSocketListeners = (socket) => {
             socket.off("redo", handleRemoteRedo)
             socket.off("clear", handleRemoteClear)
         }
-    }, [socket, dispatch])
+    }, [dispatch])
 }
