@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
     updateTextContent,
     updateCurrentText,
     commitCurrentText,
+    updateTextPosition,
 } from "@/store/drawingSlice";
 import { v4 as uuidv4 } from "uuid";
 
@@ -59,6 +60,9 @@ const useTextEditing = (stageRef, socket) => {
 
             dispatch(updateCurrentText(newText));
             socket.emit("text:start", newText);
+
+            // Wait for DOM update then trigger editing
+            setTimeout(() => handleEditText(newText), 0)
         }
     };
 
@@ -150,11 +154,21 @@ const useTextEditing = (stageRef, socket) => {
                 dispatch(updateTextContent({ id: textObj.id, text: textarea.value }));
                 socket.emit("text:update", { id: textObj.id, text: textarea.value });
             }
-            document.body.removeChild(textarea);    //  Clean up textarea
+            textarea.removeEventListener("input", resizeTextarea);
+            textarea.remove();
             setIsEditingText(false);                //  Exit editing mode
         });
     };
 
+    /**
+     * Called when a text object is moved
+     * Updates the text's position in the store and emits to socket.
+     * @param {Object} updatedText - The updated text object with new position.
+     */
+    const handleUpdateTextPosition = (updatedText) => {
+        dispatch(updateTextPosition({ id: updatedText.id, x: updatedText.x, y: updatedText.y }))
+        socket.emit("text:update", { id: updatedText.id, x: updatedText.x, y: updatedText.y })
+    }
     // Return hook API for use in components
     return {
         handleAddText,
@@ -162,6 +176,7 @@ const useTextEditing = (stageRef, socket) => {
         handleCommitText,
         isEditingText,
         editTextProps,
+        handleUpdateTextPosition,
     };
 };
 

@@ -136,9 +136,11 @@ const drawingSlice = createSlice({
         // Updates the content of a specific text element
         updateTextContent: (state, action) => {
             state.undoHistory.push(getSnapshot(state));
-            const { id, text } = action.payload
-            const target = state.texts.find(t => t.id === id)
-            if (target) target.text = text
+            const { id, ...updates } = action.payload;
+            const target = state.texts.find(t => t.id === id);
+            if (target) {
+                Object.assign(target, updates);
+            }
         },
 
         // ------- POSITION UPDATES -------
@@ -164,6 +166,16 @@ const drawingSlice = createSlice({
             if (state.shapes[index]) {
                 state.shapes[index].x = x;
                 state.shapes[index].y = y;
+            }
+        },
+
+        // Updates the position of a specific text element
+        updateTextPosition: (state, action) => {
+            const { id, x, y } = action.payload
+            const text = state.texts.find(t => t.id === id)
+            if (text) {
+                text.x = x
+                text.y = y
             }
         },
 
@@ -238,6 +250,8 @@ export const {
     setSelectedShapeId,
     updateShapeTransform,
     updateShapePosition,
+    updateTextPosition,
+    updateLinePosition,
     setZoom,
     setStagePosition,
     toggleGrid

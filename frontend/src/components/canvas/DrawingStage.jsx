@@ -30,10 +30,12 @@ const DrawingStage = ({
     useCanvasEvents({ selectedTool, stageRef });
 
   // Hook to manage double-click text editing functionality
-  const { handleEditText, isEditingText, editTextProps } = useTextEditing(
-    stageRef,
-    socket
-  );
+  const {
+    handleEditText,
+    isEditingText,
+    editTextProps,
+    handleUpdateTextPosition,
+  } = useTextEditing(stageRef, socket);
 
   const stageX = useSelector((state) => state.drawing.scaleX);
   const stageY = useSelector((state) => state.drawing.scaleY);
@@ -83,7 +85,13 @@ const DrawingStage = ({
         <TextRenderer
           isEditingText={isEditingText} //  If true, show editable textarea
           editTextProps={editTextProps} //  Props for currently edited text
-          onEdit={handleEditText} //  Function to handle double-click editing
+          onEdit={(updatedText) => {
+            if (updatedText.isDrag) {
+              handleUpdateTextPosition(updatedText);
+            } else {
+              handleEditText(updatedText);
+            }
+          }}
           socket={socket}
         />
       </Layer>

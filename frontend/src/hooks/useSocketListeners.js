@@ -57,9 +57,10 @@ export const useSocketListeners = (socket) => {
      * Handle real-time text content updates from another user.
      * @param {Object} payload - Contains id and new text string 
      */
-    const handleTextUpdate = ({ id, text }) => {
-        dispatch(updateTextContent({ id, text }))
-    }
+    const handleTextUpdate = (updatedText) => {
+        dispatch(updateTextContent(updatedText));
+    };
+
 
     /**
      * Handle when a user finishes editing a text and commits it.
