@@ -46,10 +46,34 @@ const DrawingStage = ({
 
   const isPanning = selectedTool === "select";
 
+  const handleStageMouseDown = (e) => {
+    const stage = e.target.getStage();
+    const clickedOnEmpty = e.target === stage;
+
+    if (stage && isPanning) {
+      stage.draggable(clickedOnEmpty);
+    }
+
+    // Trigger drawing logic if not panning
+    if (!isPanning) {
+      handleMouseDown(e);
+    }
+  };
+
+  const handleStageMouseMove = (e) => {
+    if (!isPanning) handleMouseMove(e);
+  };
+
+  const handleStageMouseUp = (e) => {
+    if (!isPanning) handleMouseUp(e);
+  };
+
   // Update stage position when dragging ends (only in select mode)
   const handleDragEnd = (e) => {
-    if (!isPanning) return;
-    dispatch(setStagePosition({ x: e.target.x(), y: e.target.y() }));
+    // Only update position if canvas itself was dragged
+    if (isPanning && e.target === e.target.getStage()) {
+      dispatch(setStagePosition({ x: e.target.x(), y: e.target.y() }));
+    }
   };
 
   return (
@@ -62,12 +86,11 @@ const DrawingStage = ({
       y={stageY}
       ref={stageRef} //  Assign the stageRef so Konva APIs can be used
       className="rounded-lg bg-white dark:bg-gray-400"
-      draggable={isPanning}
       onDragEnd={handleDragEnd}
       style={{ borderRadius: "12px", cursor: isPanning ? "grab" : "crosshair" }}
-      onMouseDown={!isPanning ? handleMouseDown : undefined} //  Start drawing (line or shape)
-      onMouseMove={!isPanning ? handleMouseMove : undefined} //  Draw as the mouse moves
-      onMouseUp={!isPanning ? handleMouseUp : undefined} //  Complete the drawing action
+      onMouseDown={handleStageMouseDown} //  Start drawing (line or shape)
+      onMouseMove={handleStageMouseMove} //  Draw as the mouse moves
+      onMouseUp={handleStageMouseUp} //  Complete the drawing action
     >
       {showGrid && <GridLayer width={10000} height={10000} />}
       <Layer>
