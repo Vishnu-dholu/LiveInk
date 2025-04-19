@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
-import { addLine, drawShape, updateCurrentLine, removeLineAt, updateCurrentText, commitCurrentText, updateCurrentShape, clearCurrentShape } from "@/store/drawingSlice";
+import { addLine, drawShape, updateCurrentLine, removeLineAt, updateCurrentText, commitCurrentText, updateCurrentShape, clearCurrentShape, startInteraction, endInteraction } from "@/store/drawingSlice";
 import { socket } from "@/lib/socket";
 
 /**
@@ -45,6 +45,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
      * depending on the selected tool and pointer position.
      */
     const handleMouseDown = () => {
+        dispatch(startInteraction())
         const pos = getPointerPosition()
         setIsMouseDown(true);
 
@@ -184,6 +185,8 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
             dispatch(commitCurrentText());
             socket.emit("text:commit", committedText);
         }
+
+        dispatch(endInteraction())
     };
 
     return { handleMouseDown, handleMouseMove, handleMouseUp, currentShape }

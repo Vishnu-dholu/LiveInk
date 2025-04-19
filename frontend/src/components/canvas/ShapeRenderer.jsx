@@ -1,6 +1,11 @@
 // Import Rect (rectangle shape) component from react-konva
 import { socket } from "@/lib/socket";
-import { setSelectedShapeId, updateShapeTransform } from "@/store/drawingSlice";
+import {
+  endInteraction,
+  setSelectedShapeId,
+  startInteraction,
+  updateShapeTransform,
+} from "@/store/drawingSlice";
 import { useEffect, useRef } from "react";
 import { Rect, Circle, Transformer } from "react-konva";
 import { useDispatch, useSelector } from "react-redux";
@@ -9,7 +14,7 @@ import { useDispatch, useSelector } from "react-redux";
  * ShapeRenderer is responsible for rendering all static shapes
  * (like reactangles) as well as a live preview of the currently being drawn.
  */
-const ShapeRenderer = ({ shapes, currentShape, selectedTool }) => {
+const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
   const dispatch = useDispatch();
 
   //  Get all finalized shapes from Redux store
@@ -72,21 +77,42 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool }) => {
           strokeWidth: 2,
           draggable: selectedTool === "select",
           onClick: () => {
-            if (selectedTool === "select") dispatch(setSelectedShapeId(index));
+            if (selectedTool === "select")
+              dispatch(setSelectedShapeId(shape.id));
+          },
+
+          onTransformStart: () => {
+            dispatch(startInteraction());
           },
 
           onTransformEnd: (e) => {
+            dispatch(endInteraction());
             const node = e.target;
             const scaleX = node.scaleX();
             const scaleY = node.scaleY();
+            const rotation = node.rotation();
 
-            const updatedShape = {
-              ...shape,
-              x: node.x(),
-              y: node.y(),
-              width: shape.width * scaleX,
-              height: shape.height * scaleY,
-            };
+            let updatedShape;
+
+            if (shape.tool === "circle") {
+              const avgScale = (scaleX + scaleY) / 2;
+              updatedShape = {
+                ...shape,
+                x: node.x() / zoom,
+                y: node.y() / zoom,
+                radius: ((shape.radius || 1) * avgScale) / zoom,
+                rotation,
+              };
+            } else {
+              updatedShape = {
+                ...shape,
+                x: node.x() / zoom,
+                y: node.y() / zoom,
+                width: (shape.width * scaleX) / zoom,
+                height: (shape.height * scaleY) / zoom,
+                rotation,
+              };
+            }
 
             node.scaleX(1);
             node.scaleY(1);
@@ -95,19 +121,25 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool }) => {
             socket.emit("shape:update", { id: shape.id, updatedShape });
           },
 
+          onDragStart: () => {
+            dispatch(startInteraction());
+          },
+
           onDragEnd: (e) => {
-            const { x, y } = e.target.position();
+            dispatch(endInteraction());
             const updatedShape = {
               ...shape,
-              x,
-              y,
+              x: e.target.x() / zoom,
+              y: e.target.y() / zoom,
             };
 
             dispatch(updateShapeTransform({ id: shape.id, updatedShape }));
             socket.emit("shape:update", { id: shape.id, updatedShape });
           },
 
-          ref: (el) => (shapeRefs.current[index] = el),
+          ref: (el) => {
+            if (el) shapeRefs.current[shape.id] = el;
+          },
         };
 
         return shape.tool === "circle" ? (

@@ -16,6 +16,7 @@ const initialState = {
     stageX: 0,              //  X scroll position of canvas
     stageY: 0,              //  Y scroll position of canvas
     showGrid: true,         // Toggle to show/hide canvas gride
+    isInteracting: false,
 };
 
 const drawingSlice = createSlice({
@@ -211,6 +212,18 @@ const drawingSlice = createSlice({
         // Toggles the background grid visibility
         toggleGrid: (state) => {
             state.showGrid = !state.showGrid
+        },
+
+        startInteraction: (state) => {
+            if (!state.isInteracting) {
+                state.undoHistory.push(getSnapshot(state))
+                state.redoHistory = []
+            }
+            state.isInteracting = true
+        },
+
+        endInteraction: (state) => {
+            state.isInteracting = false
         }
     },
 });
@@ -254,7 +267,9 @@ export const {
     updateLinePosition,
     setZoom,
     setStagePosition,
-    toggleGrid
+    toggleGrid,
+    startInteraction,
+    endInteraction,
 } = drawingSlice.actions;
 
 export default drawingSlice.reducer;

@@ -1,6 +1,7 @@
 // Importing React hooks and necessary functions
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { debounce } from "lodash";
 
 // UI components
 import Toolbar from "./Toolbar"; //  Top-bar with undo, redo, clear
@@ -58,6 +59,12 @@ const Canvas = () => {
     return () => window.removeEventListener("resize", centerStage);
   }, [centerStage]);
 
+  useEffect(() => {
+    const handleResize = debounce(() => centerStage(), 100);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [centerStage]);
+
   // Handler for tool selection from toolbox
   const handleSelectTool = (tool) => setSelectedTool(tool);
 
@@ -109,7 +116,10 @@ const Canvas = () => {
         </div>
 
         {/* Drawing area: canvas rendered using react-konva */}
-        <div className="w-full max-w-6xl flex-1 h-full rounded-xl shadow-lg border bg-gray-100 dark:bg-gray-400 border-gray-300 dark:border-gray-700 overflow-hidden">
+        <div
+          className="w-full max-w-6xl flex-1 h-full rounded-xl shadow-lg border bg-gray-100 dark:bg-gray-400 border-gray-300 dark:border-gray-700 overflow-hidden transition-transform duration-300 ease-in-out"
+          style={{ transformOrigin: "center center" }}
+        >
           <DrawingStage
             stageRef={stageRef} //  Reference to Konva stage
             selectedTool={selectedTool} //  Current tool selected from toolbox
