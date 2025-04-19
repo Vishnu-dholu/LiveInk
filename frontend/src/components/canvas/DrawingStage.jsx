@@ -37,9 +37,8 @@ const DrawingStage = ({
     handleUpdateTextPosition,
   } = useTextEditing(stageRef, socket);
 
-  const stageX = useSelector((state) => state.drawing.scaleX);
-  const stageY = useSelector((state) => state.drawing.scaleY);
   const showGrid = useSelector((state) => state.drawing.showGrid);
+  const isInteracting = useSelector((state) => state.drawing.isInteracting);
 
   const width = window.innerWidth;
   const height = window.innerHeight;
@@ -58,18 +57,16 @@ const DrawingStage = ({
       height={height}
       scaleX={zoom}
       scaleY={zoom}
-      x={stageX}
-      y={stageY}
       ref={stageRef} //  Assign the stageRef so Konva APIs can be used
       className="rounded-lg bg-white dark:bg-gray-400"
-      draggable={isPanning}
+      draggable={isPanning && !isInteracting}
       onDragEnd={handleDragEnd}
       style={{ borderRadius: "12px", cursor: isPanning ? "grab" : "crosshair" }}
       onMouseDown={!isPanning ? handleMouseDown : undefined} //  Start drawing (line or shape)
       onMouseMove={!isPanning ? handleMouseMove : undefined} //  Draw as the mouse moves
       onMouseUp={!isPanning ? handleMouseUp : undefined} //  Complete the drawing action
     >
-      {showGrid && <GridLayer width={10000} height={10000} />}
+      {showGrid && <GridLayer width={10000} height={10000} zoom={zoom} />}
       <Layer>
         {/* Render all previous and current freehand lines  */}
         <LineRenderer lines={lines} currentLine={currentLine} />

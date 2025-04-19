@@ -6,49 +6,36 @@ import { useSelector } from "react-redux";
  *  It dynamically adjusts according to zoom and pan to create
  *  an infinite-scrolling grid experience.
  */
-const GridLayer = ({ width, height, gridSize = 50 }) => {
-  // Get zoom and stage position from Redux state
-  const zoom = useSelector((state) => state.drawing.zoom);
-  const stageX = useSelector((state) => state.drawing.stageX);
-  const stageY = useSelector((state) => state.drawing.stageY);
-
+const GridLayer = ({ width, height, gridSize = 50, zoom }) => {
   const scaledGridSize = gridSize * zoom;
 
-  const verticalLines = [];
-  const horizontalLines = [];
+  const lines = [];
 
-  // Calculate where the first vertical line should start based on pan
-  const startX = -stageX % scaledGridSize;
-  const startY = -stageY % scaledGridSize;
-
-  // Generate vertical grid lines
-  for (let x = startX; x < width; x += scaledGridSize) {
-    verticalLines.push(
+  // Create vertical lines
+  for (let x = 0; x < width / zoom; x += scaledGridSize) {
+    lines.push(
       <Line
         key={`v-${x}`}
-        points={[x, 0, x, height]}
+        points={[x, 0, x, height / zoom]}
         stroke="#e0e0e0"
-        strokeWidth={1}
+        strokeWidth={1 / zoom}
       />
     );
   }
 
-  // Generate horizontal grid lines
-  for (let y = startY; y < height; y += scaledGridSize) {
-    horizontalLines.push(
+  // Create horizontal lines
+  for (let y = 0; y < height / zoom; y += scaledGridSize) {
+    lines.push(
       <Line
         key={`h-${y}`}
-        points={[0, y, width, y]}
+        points={[0, y, width / zoom, y]}
         stroke="#e0e0e0"
-        strokeWidth={1}
+        strokeWidth={1 / zoom}
       />
     );
   }
 
-  return (
-    // The grid is static and doesn't receive pointer events
-    <Layer listening={false}>{[...verticalLines, ...horizontalLines]}</Layer>
-  );
+  return <Layer listening={false}>{lines}</Layer>;
 };
 
 export default GridLayer;
