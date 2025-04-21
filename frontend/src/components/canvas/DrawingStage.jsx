@@ -69,7 +69,11 @@ const DrawingStage = ({
       {showGrid && <GridLayer width={10000} height={10000} zoom={zoom} />}
       <Layer>
         {/* Render all previous and current freehand lines  */}
-        <LineRenderer lines={lines} currentLine={currentLine} />
+        <LineRenderer
+          lines={lines}
+          currentLine={currentLine}
+          selectedTool={selectedTool}
+        />
 
         {/* Render all previous and current freehand lines  */}
         <ShapeRenderer

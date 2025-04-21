@@ -90,7 +90,8 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
 
             dispatch(updateCurrentText(newText));
             socket.emit("text:start", newText);
-        } else if (selectedTool === "circle") {
+        }
+        else if (selectedTool === "circle") {
             dispatch(updateCurrentShape({ type: "circle", x: pos.x, y: pos.y, radius: 0 }))
         }
     };
@@ -108,7 +109,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
             if (currentLine.length > 0) {
                 const updatedLine = [...currentLine, pos.x, pos.y]
                 dispatch(updateCurrentLine(updatedLine));
-                socket.emit("draw:live", updatedLine)
+                socket.emit("draw:live", { points: updatedLine, tool: selectedTool })
             }
         } else if (selectedTool === "square" && currentShape) {
             // Keep shape a square by taking max distance
@@ -166,6 +167,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
                     stroke: selectedTool === "pen" ? "black" : "#353839",
                     strokeWidth: selectedTool === "pen" ? 3 : 1.8,
                     opacity: selectedTool === "pen" ? 1 : 0.6,
+                    dash: selectedTool === "pencil" ? [5, 5] : [],
                 };
                 dispatch(addLine(newLine));
                 socket.emit("draw", newLine);

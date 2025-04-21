@@ -7,7 +7,7 @@ import {
   updateShapeTransform,
 } from "@/store/drawingSlice";
 import { useEffect, useRef } from "react";
-import { Rect, Circle, Transformer } from "react-konva";
+import { Rect, Circle, Transformer, Line } from "react-konva";
 import { useDispatch, useSelector } from "react-redux";
 
 /**
@@ -19,6 +19,8 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
 
   //  Get all finalized shapes from Redux store
   const selectedShapeId = useSelector((state) => state.drawing.selectedShapeId);
+  const liveShapes = useSelector((state) => state.drawing.liveShapes);
+  const liveLines = useSelector((state) => state.drawing.liveLines);
 
   // Refs for Transformer and shape instances
   const transformerRef = useRef(null);
@@ -142,8 +144,13 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
           },
         };
 
-        return shape.tool === "circle" ? (
-          <Circle key={index} {...commonProps} radius={shape.radius} />
+        return shape.type === "circle" ? (
+          <Circle
+            key={index}
+            {...shape}
+            {...commonProps}
+            radius={shape.radius}
+          />
         ) : (
           <Rect
             key={index}
@@ -157,7 +164,7 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
       {/* Add Transformer for the selected shape */}
       {selectedShapeId !== null && <Transformer ref={transformerRef} />}
 
-      {/* Render the shape currently beingn drawn */}
+      {/* Render the shape currently being drawn */}
       {currentShape &&
         (selectedTool === "circle" ? (
           <Circle
@@ -179,6 +186,50 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
             dash={[10, 5]} //  Dotted line for preview
           />
         ))}
+
+      {liveShapes.map((shape, index) =>
+        shape.type === "circle" ? (
+          <Circle
+            key={`live-circle-${index}`}
+            x={shape.x}
+            y={shape.y}
+            radius={shape.radius}
+            stroke="black"
+            strokeWidth={2}
+            dash={[10, 5]}
+            listening={false}
+          />
+        ) : (
+          <Rect
+            key={`live-rect-${index}`}
+            x={shape.x}
+            y={shape.y}
+            width={shape.width}
+            height={shape.height}
+            stroke="black"
+            strokeWidth={2}
+            dash={[10, 5]}
+            listening={false}
+          />
+        )
+      )}
+
+      {liveLines.map((line, index) => (
+        <Line
+          key={`live-line-${index}`}
+          points={line.points}
+          stroke={line.tool === "pen" ? "black" : "#353839"}
+          strokeWidth={line.tool === "pen" ? 3 : 1.8}
+          opacity={line.tool === "pen" ? 1 : 0.6}
+          dash={line.tool === "pencil" ? [5, 5] : []}
+          tension={0.5}
+          lineCap="round"
+          globalCompositeOperation={
+            line.tool === "eraser" ? "destination-out" : "source-over"
+          }
+          listening={false}
+        />
+      ))}
     </>
   );
 };

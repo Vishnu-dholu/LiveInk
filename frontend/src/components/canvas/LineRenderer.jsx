@@ -6,14 +6,7 @@ import { useSelector } from "react-redux";
  * LineRenderer is responsible for rendering all the user's drawn lines,
  * including completed lines and the line currently being drawn.
  */
-const LineRenderer = () => {
-  // All completed lines from the Redux store
-  const lines = useSelector((state) => state.drawing.lines);
-  // Points array for the line currently being drawn
-  const currentLine = useSelector((state) => state.drawing.currentLine);
-  // Currently selected tool
-  const selectedTool = useSelector((state) => state.drawing.selectedTool);
-
+const LineRenderer = ({ lines, currentLine, selectedTool }) => {
   // Helper function to determine line style based on tool
   const getLineProps = (tool) => {
     return {

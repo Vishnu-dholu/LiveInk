@@ -17,6 +17,8 @@ const initialState = {
     stageY: 0,              //  Y scroll position of canvas
     showGrid: true,         // Toggle to show/hide canvas gride
     isInteracting: false,
+    liveShapes: [],
+    liveLines: [],
 };
 
 const drawingSlice = createSlice({
@@ -31,6 +33,15 @@ const drawingSlice = createSlice({
             state.redoHistory = [];                         // Clear redo stack after new action
         },
 
+        // Updates the currently drawing line (real-time drawing)
+        updateCurrentLine: (state, action) => {
+            state.currentLine = action.payload;
+        },
+
+        setLiveLines: (state, action) => {
+            state.liveLines = action.payload
+        },
+
         // Adds a shape with a unique ID
         drawShape: (state, action) => {
             const shape = { id: nanoid(), ...action.payload }
@@ -42,6 +53,10 @@ const drawingSlice = createSlice({
         // Temporarily sets the current shape being drawn (used during interaction)
         updateCurrentShape: (state, action) => {
             state.currentShape = action.payload
+        },
+
+        setLiveShapes: (state, action) => {
+            state.liveShapes = action.payload
         },
 
         // Clears the currently drawn shape once finalized
@@ -104,11 +119,6 @@ const drawingSlice = createSlice({
                     return newPoints.length > 2 ? { ...line, points: newPoints } : null;
                 })
                 .filter(Boolean);   //  Remove null entries
-        },
-
-        // Updates the currently drawing line (real-time drawing)
-        updateCurrentLine: (state, action) => {
-            state.currentLine = action.payload;
         },
 
         // ----- TEXT LOGIC -----
@@ -248,7 +258,9 @@ function restoreSnapshot(state, snapshot) {
 
 export const {
     addLine,
+    setLiveLines,
     drawShape,
+    setLiveShapes,
     updateCurrentShape,
     clearCurrentShape,
     undoAction,

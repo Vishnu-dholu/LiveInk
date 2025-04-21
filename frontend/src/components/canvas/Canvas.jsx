@@ -1,7 +1,6 @@
 // Importing React hooks and necessary functions
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { debounce } from "lodash";
 
 // UI components
 import Toolbar from "./Toolbar"; //  Top-bar with undo, redo, clear
@@ -57,12 +56,6 @@ const Canvas = () => {
     centerStage();
     window.addEventListener("resize", centerStage);
     return () => window.removeEventListener("resize", centerStage);
-  }, [centerStage]);
-
-  useEffect(() => {
-    const handleResize = debounce(() => centerStage(), 100);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
   }, [centerStage]);
 
   // Handler for tool selection from toolbox

@@ -1,4 +1,4 @@
-import { addLine, clearCurrentShape, commitCurrentText, drawShape, removeLineAt, updateCurrentLine, updateCurrentShape, updateCurrentText, updateShapeTransform, updateTextContent } from "@/store/drawingSlice";
+import { addLine, clearCurrentShape, commitCurrentText, drawShape, removeLineAt, setLiveLines, setLiveShapes, updateCurrentLine, updateCurrentShape, updateCurrentText, updateShapeTransform, updateTextContent } from "@/store/drawingSlice";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { clearCanvas, redoAction, undoAction } from "../store/drawingSlice";
@@ -16,33 +16,35 @@ export const useSocketListeners = (socket) => {
      * Handle finalized line drawing from another user.
      * @param {Object} line - The complete line object to be added.
      */
-    const handleDraw = (line) => {
-        dispatch(addLine(line))
+    const handleDraw = (finalLine) => {
+        dispatch(addLine(finalLine))
+        dispatch(setLiveLines([]))
     }
 
     /**
      * Handle live line drawing updates from another user.
      * @param {Array} updatedLine - The array of updated points during drawing
      */
-    const handleLiveLine = (updatedLine) => {
-        dispatch(updateCurrentLine(updatedLine))
+    const handleLiveLine = (liveLine) => {
+        dispatch(setLiveLines([liveLine]))
     }
 
     /**
      * Handle finalized shape drawing from another user.
      * @param {Object} shape - The shape object to be added to the canvas.
      */
-    const handleShape = (shape) => {
-        dispatch(drawShape(shape))
+    const handleShape = (finalShape) => {
+        dispatch(drawShape(finalShape))
         dispatch(clearCurrentShape())
+        dispatch(setLiveShapes([]))
     }
 
     /**
      * Handle live shape transformation while it's being resized or drawn.
      * @param {Object} updatedShape 
      */
-    const handleLiveShape = (updatedShape) => {
-        dispatch(updateCurrentShape(updatedShape))
+    const handleLiveShape = (liveShape) => {
+        dispatch(setLiveShapes([liveShape]))
     }
 
     /**
