@@ -17,6 +17,8 @@ const LineRenderer = ({ lines, currentLine, selectedTool }) => {
     };
   };
 
+  const liveLines = useSelector((state) => state.drawing.liveLines);
+
   return (
     <>
       {/* Render each completed line from the Redux store */}
@@ -43,6 +45,23 @@ const LineRenderer = ({ lines, currentLine, selectedTool }) => {
           lineJoin="round"
         />
       )}
+
+      {liveLines.map((line, index) => (
+        <Line
+          key={`live-line-${index}`}
+          points={line.points}
+          stroke={line.tool === "pen" ? "black" : "#353839"}
+          strokeWidth={line.tool === "pen" ? 3 : 1.8}
+          opacity={line.tool === "pen" ? 1 : 0.6}
+          dash={line.tool === "pencil" ? [5, 5] : []}
+          tension={0.5}
+          lineCap="round"
+          globalCompositeOperation={
+            line.tool === "eraser" ? "destination-out" : "source-over"
+          }
+          listening={false}
+        />
+      ))}
     </>
   );
 };

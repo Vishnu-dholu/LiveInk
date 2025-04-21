@@ -20,7 +20,6 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
   //  Get all finalized shapes from Redux store
   const selectedShapeId = useSelector((state) => state.drawing.selectedShapeId);
   const liveShapes = useSelector((state) => state.drawing.liveShapes);
-  const liveLines = useSelector((state) => state.drawing.liveLines);
 
   // Refs for Transformer and shape instances
   const transformerRef = useRef(null);
@@ -213,23 +212,6 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
           />
         )
       )}
-
-      {liveLines.map((line, index) => (
-        <Line
-          key={`live-line-${index}`}
-          points={line.points}
-          stroke={line.tool === "pen" ? "black" : "#353839"}
-          strokeWidth={line.tool === "pen" ? 3 : 1.8}
-          opacity={line.tool === "pen" ? 1 : 0.6}
-          dash={line.tool === "pencil" ? [5, 5] : []}
-          tension={0.5}
-          lineCap="round"
-          globalCompositeOperation={
-            line.tool === "eraser" ? "destination-out" : "source-over"
-          }
-          listening={false}
-        />
-      ))}
     </>
   );
 };
