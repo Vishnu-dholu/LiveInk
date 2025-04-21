@@ -45,7 +45,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
      * depending on the selected tool and pointer position.
      */
     const handleMouseDown = () => {
-        dispatch(startInteraction())
+        // dispatch(startInteraction())
         const pos = getPointerPosition()
         setIsMouseDown(true);
 
@@ -188,7 +188,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
             socket.emit("text:commit", committedText);
         }
 
-        dispatch(endInteraction())
+        // dispatch(endInteraction())
     };
 
     return { handleMouseDown, handleMouseMove, handleMouseUp, currentShape }

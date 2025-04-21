@@ -16,7 +16,7 @@ const initialState = {
     stageX: 0,              //  X scroll position of canvas
     stageY: 0,              //  Y scroll position of canvas
     showGrid: true,         // Toggle to show/hide canvas gride
-    isInteracting: false,
+    // isInteracting: false,
     liveShapes: [],
     liveLines: [],
 };
@@ -162,11 +162,11 @@ const drawingSlice = createSlice({
             if (line) {
                 const oldPoints = [...line.points]
                 const newPoints = []
-
+                state.undoHistory.push(getSnapshot(state));
                 for (let i = 0; i < oldPoints.length; i += 2) {
                     newPoints.push(oldPoints[i] + x, oldPoints[i + 1] + y)
                 }
-
+                state.redoHistory = [];
                 line.points = newPoints
             }
         },
@@ -175,8 +175,10 @@ const drawingSlice = createSlice({
         updateShapePosition: (state, action) => {
             const { index, x, y } = action.payload;
             if (state.shapes[index]) {
+                state.undoHistory.push(getSnapshot(state));
                 state.shapes[index].x = x;
                 state.shapes[index].y = y;
+                state.redoHistory = [];
             }
         },
 
@@ -185,8 +187,10 @@ const drawingSlice = createSlice({
             const { id, x, y } = action.payload
             const text = state.texts.find(t => t.id === id)
             if (text) {
+                state.undoHistory.push(getSnapshot(state));
                 text.x = x
                 text.y = y
+                state.redoHistory = [];
             }
         },
 
@@ -204,6 +208,8 @@ const drawingSlice = createSlice({
                 console.warn("❌ Shape ID not found in Redux:", id);
                 return;
             }
+            state.undoHistory.push(getSnapshot(state)); // 🔥 Add this line
+            state.redoHistory = [];
             state.shapes[index] = { ...state.shapes[index], ...updatedShape };
         },
 
@@ -224,17 +230,17 @@ const drawingSlice = createSlice({
             state.showGrid = !state.showGrid
         },
 
-        startInteraction: (state) => {
-            if (!state.isInteracting) {
-                state.undoHistory.push(getSnapshot(state))
-                state.redoHistory = []
-            }
-            state.isInteracting = true
-        },
+        // startInteraction: (state) => {
+        //     if (!state.isInteracting) {
+        //         state.undoHistory.push(getSnapshot(state))
+        //         state.redoHistory = []
+        //     }
+        //     state.isInteracting = true
+        // },
 
-        endInteraction: (state) => {
-            state.isInteracting = false
-        }
+        // endInteraction: (state) => {
+        //     state.isInteracting = false
+        // }
     },
 });
 
@@ -243,9 +249,9 @@ const drawingSlice = createSlice({
 // Creates a shallow copy of drawable elements for undo/redo
 function getSnapshot(state) {
     return {
-        lines: [...state.lines],
-        shapes: [...state.shapes],
-        texts: [...state.texts]
+        lines: state.lines.map(line => ({ ...line })),
+        shapes: state.shapes.map(shape => ({ ...shape })),
+        texts: state.texts.map(text => ({ ...text }))
     }
 }
 

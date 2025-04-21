@@ -46,8 +46,14 @@ const Canvas = () => {
     const screenWidth = window.innerWidth;
     const screenHeight = window.innerHeight;
 
-    const offsetX = screenWidth / 2 - (virtualCanvasWidth * zoom) / 2;
-    const offsetY = screenHeight / 2 - (virtualCanvasHeight * zoom) / 2;
+    const offsetX = Math.max(
+      0,
+      screenWidth / 2 - (virtualCanvasWidth * zoom) / 2
+    );
+    const offsetY = Math.max(
+      0,
+      screenHeight / 2 - (virtualCanvasHeight * zoom) / 2
+    );
 
     dispatch(setStagePosition({ x: offsetX, y: offsetY }));
   }, [zoom, dispatch]);
@@ -57,6 +63,21 @@ const Canvas = () => {
     window.addEventListener("resize", centerStage);
     return () => window.removeEventListener("resize", centerStage);
   }, [centerStage]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.key === "z") {
+        handleUndo();
+      } else if (e.ctrlKey && e.shiftKey && e.key === "Z") {
+        handleRedo();
+      } else if (e.key === "Delete") {
+        handleClear();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   // Handler for tool selection from toolbox
   const handleSelectTool = (tool) => setSelectedTool(tool);

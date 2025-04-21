@@ -123,12 +123,12 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
             socket.emit("shape:update", { id: shape.id, updatedShape });
           },
 
-          onDragStart: () => {
-            dispatch(startInteraction());
-          },
+          // onDragStart: () => {
+          //   dispatch(startInteraction());
+          // },
 
           onDragEnd: (e) => {
-            dispatch(endInteraction());
+            // dispatch(endInteraction());
             const updatedShape = {
               ...shape,
               x: e.target.x() / zoom,
