@@ -18,6 +18,7 @@ const useTextEditing = (stageRef, socket) => {
     // Selects the text array and currently edited text from global Redux state
     const texts = useSelector((state) => state.drawing.texts);
     const currentText = useSelector((state) => state.drawing.currentText);
+    const currentFillColor = useSelector((state) => state.drawing.currentFillColor);
 
     // Local UI states for text editing
     const [isEditingText, setIsEditingText] = useState(false);      //  Flag to show if user is editing
@@ -56,6 +57,7 @@ const useTextEditing = (stageRef, socket) => {
                 text: "Type here...",
                 fontSize: 17,
                 draggable: true,
+                fill: currentFillColor || "black",
             };
 
             dispatch(updateCurrentText(newText));

@@ -12,6 +12,7 @@ const initialState = {
     currentText: null,      //  Temporarily holds text being edited
     currentShape: null,     //  Temporarily holds shape being drawn
     selectedShapeId: null,  //  ID of currently selected shape
+    selectedTextId: null,
     zoom: 1,                //  Current zoom level
     stageX: 0,              //  X scroll position of canvas
     stageY: 0,              //  Y scroll position of canvas
@@ -127,6 +128,10 @@ const drawingSlice = createSlice({
             state.undoHistory.push(getSnapshot(state))
             state.texts.push(text)
             state.redoHistory = []
+        },
+
+        setSelectedTextId: (state, action) => {
+            state.selectedTextId = action.payload;
         },
 
         // Sets the currently editing text element
@@ -289,6 +294,7 @@ export const {
     removeLineAt,
     updateCurrentLine,
     addText,
+    setSelectedTextId,
     updateCurrentText,
     commitCurrentText,
     updateTextContent,

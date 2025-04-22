@@ -1,7 +1,8 @@
 // Import Konva's Text component for rendering text on canvas
+import { setSelectedTextId } from "@/store/drawingSlice";
 import { Text } from "react-konva";
 // Import Redux hook to access state from the store
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 /**
  * TextRenderer handles rendering of all text elements on the canvas.
@@ -17,6 +18,7 @@ const TextRenderer = ({ isEditingText, editTextProps, onEdit }) => {
   const texts = useSelector((state) => state.drawing.texts);
   // A temporary text object that is currently being created
   const currentText = useSelector((state) => state.drawing.currentText);
+  const dispatch = useDispatch();
 
   /**
    * Handles when a text object is dragged and dropped to a new position.
@@ -30,6 +32,11 @@ const TextRenderer = ({ isEditingText, editTextProps, onEdit }) => {
       y,
       isDrag: true, //  Mark this edit as a result of dragging
     });
+  };
+
+  const handleTextDoubleClick = (t) => {
+    dispatch(setSelectedTextId(t.id));
+    onEdit(t);
   };
 
   return (
@@ -56,7 +63,7 @@ const TextRenderer = ({ isEditingText, editTextProps, onEdit }) => {
             fontSize={t.fontSize}
             fill={t.fill || "black"}
             draggable
-            onDblClick={() => onEdit(t)} //  Double-click triggers edit mode
+            onDblClick={() => handleTextDoubleClick(t)} //  Double-click triggers edit mode
             onDragEnd={(e) => handleTextDragEnd(e, t)} //  Handle repositioning after drag
           />
         );
