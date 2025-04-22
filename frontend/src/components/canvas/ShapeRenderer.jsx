@@ -1,9 +1,8 @@
 // Import Rect (rectangle shape) component from react-konva
 import { socket } from "@/lib/socket";
 import {
-  endInteraction,
   setSelectedShapeId,
-  startInteraction,
+  updateShapeFill,
   updateShapeTransform,
 } from "@/store/drawingSlice";
 import { useEffect, useRef } from "react";
@@ -20,6 +19,10 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
   //  Get all finalized shapes from Redux store
   const selectedShapeId = useSelector((state) => state.drawing.selectedShapeId);
   const liveShapes = useSelector((state) => state.drawing.liveShapes);
+
+  const currentFillColor = useSelector(
+    (state) => state.drawing.currentFillColor
+  );
 
   // Refs for Transformer and shape instances
   const transformerRef = useRef(null);
@@ -76,18 +79,24 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
           y: shape.y,
           stroke: "black",
           strokeWidth: 2,
+          fill: shape.fill || "transparent",
           draggable: selectedTool === "select",
-          onClick: () => {
-            if (selectedTool === "select")
-              dispatch(setSelectedShapeId(shape.id));
-          },
 
-          onTransformStart: () => {
-            dispatch(startInteraction());
+          onClick: () => {
+            if (selectedTool === "select") {
+              dispatch(setSelectedShapeId(shape.id));
+            } else if (selectedTool === "paint") {
+              dispatch(
+                updateShapeFill({ id: shape.id, fill: currentFillColor })
+              );
+              socket.emit("shape:fill", {
+                id: shape.id,
+                fill: currentFillColor,
+              });
+            }
           },
 
           onTransformEnd: (e) => {
-            dispatch(endInteraction());
             const node = e.target;
             const scaleX = node.scaleX();
             const scaleY = node.scaleY();
@@ -119,15 +128,13 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
             node.scaleY(1);
 
             dispatch(updateShapeTransform({ id: shape.id, updatedShape }));
-            socket.emit("shape:update", { id: shape.id, updatedShape });
+            socket.emit("shape:update", {
+              id: shape.id,
+              updatedShape,
+            });
           },
 
-          // onDragStart: () => {
-          //   dispatch(startInteraction());
-          // },
-
           onDragEnd: (e) => {
-            // dispatch(endInteraction());
             const updatedShape = {
               ...shape,
               x: e.target.x() / zoom,
@@ -143,21 +150,24 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
           },
         };
 
-        return shape.type === "circle" ? (
-          <Circle
-            key={index}
-            {...shape}
-            {...commonProps}
-            radius={shape.radius}
-          />
-        ) : (
-          <Rect
-            key={index}
-            {...commonProps}
-            width={shape.width}
-            height={shape.height}
-          />
-        );
+        if (shape.type === "circle") {
+          return (
+            <Circle
+              key={`${shape.id}-${shape.fill}`}
+              radius={shape.radius}
+              {...commonProps}
+            />
+          );
+        } else {
+          return (
+            <Rect
+              key={`${shape.id}-${shape.fill}`}
+              width={shape.width}
+              height={shape.height}
+              {...commonProps}
+            />
+          );
+        }
       })}
 
       {/* Add Transformer for the selected shape */}
@@ -173,6 +183,7 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
             stroke="black"
             strokeWidth={2}
             dash={[10, 5]}
+            // fill={currentFillColor}
           />
         ) : (
           <Rect
@@ -183,6 +194,7 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
             stroke="black"
             strokeWidth={2}
             dash={[10, 5]} //  Dotted line for preview
+            // fill={currentFillColor}
           />
         ))}
 
@@ -197,6 +209,7 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
             strokeWidth={2}
             dash={[10, 5]}
             listening={false}
+            fill="rgba(0,0,0,0.2)"
           />
         ) : (
           <Rect
@@ -209,6 +222,7 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
             strokeWidth={2}
             dash={[10, 5]}
             listening={false}
+            fill="rgba(0,0,0,0.2)"
           />
         )
       )}

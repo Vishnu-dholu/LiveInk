@@ -19,6 +19,7 @@ import {
 // Socket instance for real-time collaboration
 import { socket } from "@/lib/socket";
 import { useSocketListeners } from "@/hooks/useSocketListeners";
+import ColorPickerWrapper from "./ColorPickerWrapper";
 
 // Constants for large virtual canvas
 const virtualCanvasWidth = 10000;
@@ -38,6 +39,8 @@ const Canvas = () => {
   // Redux state: the current line being drawn (live)
   const currentLine = useSelector((state) => state.drawing.currentLine);
   const zoom = useSelector((state) => state.drawing.zoom);
+
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false); // Manage color picker visibility
 
   // Register socket listeners (text, drawing, undo, etc.)
   useSocketListeners(socket);
@@ -80,7 +83,14 @@ const Canvas = () => {
   }, []);
 
   // Handler for tool selection from toolbox
-  const handleSelectTool = (tool) => setSelectedTool(tool);
+  const handleSelectTool = (tool) => {
+    setSelectedTool(tool);
+    if (tool === "paint") {
+      setIsColorPickerOpen(true); // Open color picker when paint tool is selected
+    } else {
+      setIsColorPickerOpen(false); // Close color picker when other tool is selected
+    }
+  };
 
   // Undo action and emit to other users via socket
   const handleUndo = () => {
@@ -128,6 +138,13 @@ const Canvas = () => {
         <div className="flex md:hidden w-full justify-center mb-4">
           <Toolbox onSelectTool={handleSelectTool} activeTool={selectedTool} />
         </div>
+
+        {/* Only show color picker if paint tool is selected */}
+        {selectedTool === "paint" && isColorPickerOpen && (
+          <div>
+            <ColorPickerWrapper onClose={() => setIsColorPickerOpen(false)} />
+          </div>
+        )}
 
         {/* Drawing area: canvas rendered using react-konva */}
         <div

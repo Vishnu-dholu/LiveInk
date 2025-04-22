@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
-import { addLine, drawShape, updateCurrentLine, removeLineAt, updateCurrentText, commitCurrentText, updateCurrentShape, clearCurrentShape, startInteraction, endInteraction } from "@/store/drawingSlice";
+import { addLine, drawShape, updateCurrentLine, removeLineAt, updateCurrentText, commitCurrentText, updateCurrentShape, clearCurrentShape } from "@/store/drawingSlice";
 import { socket } from "@/lib/socket";
 
 /**
@@ -15,6 +15,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
     const currentLine = useSelector((state) => state.drawing.currentLine);
     const currentText = useSelector((state) => state.drawing.currentText);
     const currentShape = useSelector((state) => state.drawing.currentShape);
+    const currentFillColor = useSelector((state) => state.drawing.currentFillColor)
 
     const [isMouseDown, setIsMouseDown] = useState(false);  //  Track if mouse is being held down
 
@@ -85,6 +86,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
                 y: pos.y,
                 text: "Type here...",
                 fontSize: 17,
+                // fill: currentFillColor,
                 draggable: true,
             };
 
@@ -176,7 +178,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
         } else if (["square", "rectangle", "circle"].includes(selectedTool)) {
             // Finalize and commit shape to Redux + socket
             if (currentShape) {
-                const shapeWithTool = { ...currentShape, id: uuidv4(), tool: selectedTool }
+                const shapeWithTool = { ...currentShape, id: uuidv4(), tool: selectedTool, fill: currentFillColor }
                 dispatch(drawShape(shapeWithTool));
                 socket.emit("drawShape", shapeWithTool);
                 dispatch(clearCurrentShape())

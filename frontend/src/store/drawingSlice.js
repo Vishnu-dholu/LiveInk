@@ -16,9 +16,9 @@ const initialState = {
     stageX: 0,              //  X scroll position of canvas
     stageY: 0,              //  Y scroll position of canvas
     showGrid: true,         // Toggle to show/hide canvas gride
-    // isInteracting: false,
     liveShapes: [],
     liveLines: [],
+    currentFillColor: "transparent",
 };
 
 const drawingSlice = createSlice({
@@ -44,7 +44,7 @@ const drawingSlice = createSlice({
 
         // Adds a shape with a unique ID
         drawShape: (state, action) => {
-            const shape = { id: nanoid(), ...action.payload }
+            const shape = { id: nanoid(), fill: state.currentFillColor, ...action.payload }
             state.undoHistory.push(getSnapshot(state))
             state.shapes.push(shape)
             state.redoHistory = []
@@ -85,11 +85,7 @@ const drawingSlice = createSlice({
 
         // Clears the canvas and saves the current snapshot to undoHistory
         clearCanvas: (state) => {
-            state.undoHistory.push({
-                lines: [...state.lines],
-                shapes: [...state.shapes],
-                texts: [...state.texts]
-            }); // Save before clearing
+            state.undoHistory.push(getSnapshot(state)); // Save before clearing
             state.redoHistory = []; // Clear redo stack
             state.lines = [];
             state.shapes = [];
@@ -124,8 +120,12 @@ const drawingSlice = createSlice({
         // ----- TEXT LOGIC -----
         // Adds a text element to the canvas
         addText: (state, action) => {
+            const text = {
+                ...action.payload,
+                fill: state.currentFillColor,
+            }
             state.undoHistory.push(getSnapshot(state))
-            state.texts.push(action.payload)
+            state.texts.push(text)
             state.redoHistory = []
         },
 
@@ -204,16 +204,38 @@ const drawingSlice = createSlice({
         updateShapeTransform: (state, action) => {
             const { id, updatedShape } = action.payload;
             const index = state.shapes.findIndex(shape => shape.id === id);
-            if (index === -1) {
-                console.warn("❌ Shape ID not found in Redux:", id);
-                return;
-            }
-            state.undoHistory.push(getSnapshot(state)); // 🔥 Add this line
-            state.redoHistory = [];
+            if (index === -1) return;
+            state.undoHistory.push(getSnapshot(state));
             state.shapes[index] = { ...state.shapes[index], ...updatedShape };
+            state.redoHistory = [];
         },
 
-        // -------VIEWPORT CONTROLS -------
+        // ------- FILL COLOR -------
+        setFillColor: (state, action) => {
+            state.currentFillColor = action.payload
+        },
+
+        updateShapeFill: (state, action) => {
+            const { id, fill } = action.payload
+            const shape = state.shapes.find(s => s.id === id)
+            if (shape) {
+                shape.fill = fill
+                state.undoHistory.push(getSnapshot(state))
+                state.redoHistory = []
+            }
+        },
+
+        updateTextFill: (state, action) => {
+            const { id, fill } = action.payload
+            const text = state.texts.find(t => t.id === id)
+            if (text) {
+                text.fill = String(fill)
+                state.undoHistory.push(getSnapshot(state))
+                state.redoHistory = []
+            }
+        },
+
+        // ------- VIEWPORT CONTROLS -------
         // Sets the zoom level of the canvas
         setZoom: (state, action) => {
             state.zoom = action.payload
@@ -229,18 +251,6 @@ const drawingSlice = createSlice({
         toggleGrid: (state) => {
             state.showGrid = !state.showGrid
         },
-
-        // startInteraction: (state) => {
-        //     if (!state.isInteracting) {
-        //         state.undoHistory.push(getSnapshot(state))
-        //         state.redoHistory = []
-        //     }
-        //     state.isInteracting = true
-        // },
-
-        // endInteraction: (state) => {
-        //     state.isInteracting = false
-        // }
     },
 });
 
@@ -286,8 +296,9 @@ export const {
     setZoom,
     setStagePosition,
     toggleGrid,
-    startInteraction,
-    endInteraction,
+    setFillColor,
+    updateShapeFill,
+    updateTextFill,
 } = drawingSlice.actions;
 
 export default drawingSlice.reducer;

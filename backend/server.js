@@ -133,6 +133,18 @@ io.on("connection", (socket) => {
         socket.broadcast.emit("clear");
     });
 
+    socket.on("color:change", (newColor) => {
+        socket.broadcast.emit("color:change", newColor)
+    })
+
+    socket.on("shape:fill", ({ id, fill }) => {
+        socket.broadcast.emit("shape:fill", { id, fill });
+    });
+
+    socket.on("text:fill", ({ id, fill }) => {
+        socket.broadcast.emit("text:fill", { id, fill });
+    });
+
     socket.on("disconnect", () => {
         console.log(`User disconnected: ${socket.id}`);
     });

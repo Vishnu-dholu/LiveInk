@@ -54,7 +54,7 @@ const TextRenderer = ({ isEditingText, editTextProps, onEdit }) => {
             x={t.x} //  X position on canvas
             y={t.y} //  Y position on canvas
             fontSize={t.fontSize}
-            fill="black"
+            fill={t.fill || "black"}
             draggable
             onDblClick={() => onEdit(t)} //  Double-click triggers edit mode
             onDragEnd={(e) => handleTextDragEnd(e, t)} //  Handle repositioning after drag

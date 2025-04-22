@@ -3,6 +3,7 @@ import {
   Circle,
   EraserIcon,
   MousePointer2,
+  PaintBucket,
   Pencil,
   PenTool,
   RectangleHorizontal,
@@ -28,6 +29,7 @@ const tools = [
   { tool: "square", Icon: Square, name: "Square" },
   { tool: "rectangle", Icon: RectangleHorizontal, name: "Rectangle" },
   { tool: "circle", Icon: Circle, name: "Circle" },
+  { tool: "paint", Icon: PaintBucket, name: "Paint-Bucket" },
 ];
 
 /**

@@ -1,4 +1,4 @@
-import { addLine, clearCurrentShape, commitCurrentText, drawShape, removeLineAt, setLiveLines, setLiveShapes, updateCurrentLine, updateCurrentShape, updateCurrentText, updateShapeTransform, updateTextContent } from "@/store/drawingSlice";
+import { addLine, clearCurrentShape, commitCurrentText, drawShape, removeLineAt, setFillColor, setLiveLines, setLiveShapes, updateCurrentLine, updateCurrentShape, updateCurrentText, updateShapeFill, updateShapeTransform, updateTextContent, updateTextFill } from "@/store/drawingSlice";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { clearCanvas, redoAction, undoAction } from "../store/drawingSlice";
@@ -85,9 +85,21 @@ export const useSocketListeners = (socket) => {
      * Handle shape transformation like drag/resize from other users.
      * @param {Object} param0 - Contains shape id and its updated transform data.
      */
-    const handleShapeUpdate = ({ id, updatedShape }) => {
-        dispatch(updateShapeTransform({ id, updatedShape }));
-    };
+    const handleShapeUpdate = ({ id, updateShape }) => {
+        dispatch(updateShapeTransform({ id, updatedShape: updateShape }));
+    }
+
+    const handleColorChange = (newColor) => {
+        dispatch(setFillColor(newColor))
+    }
+
+    const handleShapeFill = ({ id, fill }) => {
+        dispatch(updateShapeFill({ id, fill }))
+    }
+
+    const handleTextFill = ({ id, fill }) => {
+        dispatch(updateTextFill({ id, fill }))
+    }
 
     // --- Undo/Redo/Clear ---
     const handleRemoteUndo = () => {
@@ -131,6 +143,10 @@ export const useSocketListeners = (socket) => {
         socket.on("redo", handleRemoteRedo);
         socket.on("clear", handleRemoteClear);
 
+        socket.on("color:change", handleColorChange)
+        socket.on("shape:fill", handleShapeFill)
+        socket.on("text:fill", handleTextFill)
+
         // Cleanup listeners on unmount or re-init
         return () => {
             socket.off("draw", handleDraw)
@@ -147,6 +163,10 @@ export const useSocketListeners = (socket) => {
             socket.off("undo", handleRemoteUndo)
             socket.off("redo", handleRemoteRedo)
             socket.off("clear", handleRemoteClear)
+
+            socket.off("color:change", handleColorChange)
+            socket.off("shape:fill", handleShapeFill)
+            socket.off("text:fill", handleTextFill)
         }
     }, [dispatch])
 }
