@@ -215,6 +215,10 @@ const drawingSlice = createSlice({
             state.currentFillColor = action.payload
         },
 
+        resetFillColor: (state) => {
+            state.currentFillColor = "transparent"
+        },
+
         updateShapeFill: (state, action) => {
             const { id, fill } = action.payload
             const shape = state.shapes.find(s => s.id === id)
@@ -297,6 +301,7 @@ export const {
     setStagePosition,
     toggleGrid,
     setFillColor,
+    resetFillColor,
     updateShapeFill,
     updateTextFill,
 } = drawingSlice.actions;
