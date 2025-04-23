@@ -134,6 +134,7 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
               id: shape.id,
               updatedShape,
             });
+            dispatch(resetFillColor());
           },
 
           onDragEnd: (e) => {
@@ -145,6 +146,7 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
 
             dispatch(updateShapeTransform({ id: shape.id, updatedShape }));
             socket.emit("shape:update", { id: shape.id, updatedShape });
+            dispatch(resetFillColor());
           },
 
           ref: (el) => {

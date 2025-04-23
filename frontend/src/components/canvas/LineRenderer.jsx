@@ -7,17 +7,20 @@ import { useSelector } from "react-redux";
  * including completed lines and the line currently being drawn.
  */
 const LineRenderer = ({ lines, currentLine, selectedTool }) => {
+  const liveLines = useSelector((state) => state.drawing.liveLines);
+  const currentStrokeWidth = useSelector(
+    (state) => state.drawing.currentStrokeWidth
+  );
+
   // Helper function to determine line style based on tool
   const getLineProps = (tool) => {
     return {
       tension: tool === "pen" ? 0.5 : 0.2, //  Smoothing factor: pen is smoother
       dash: tool === "pencil" ? [5, 5] : [], //  Dashed effect for pencil
-      strokeWidth: tool === "pen" ? 3 : 1.8, //  Thickness based on tool
+      strokeWidth: currentStrokeWidth, //  Thickness based on tool
       stroke: tool === "pen" ? "black" : "#353839", // Stroke color based on tool
     };
   };
-
-  const liveLines = useSelector((state) => state.drawing.liveLines);
 
   return (
     <>

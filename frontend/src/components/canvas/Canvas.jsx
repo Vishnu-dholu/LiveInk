@@ -21,6 +21,8 @@ import {
 import { socket } from "@/lib/socket";
 import { useSocketListeners } from "@/hooks/useSocketListeners";
 import ColorPickerWrapper from "./ColorPickerWrapper";
+import StrokeWidthPicker from "./StrokeWidthPicker";
+import SettingsPanel from "./SettingsPanel";
 
 // Constants for large virtual canvas
 const virtualCanvasWidth = 10000;
@@ -42,6 +44,9 @@ const Canvas = () => {
   const zoom = useSelector((state) => state.drawing.zoom);
 
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false); // Manage color picker visibility
+  const [isLineResizerOpen, setIsLineResizerOpen] = useState(false);
+
+  const toggleLineResizer = () => setIsLineResizerOpen((prev) => !prev);
 
   // Register socket listeners (text, drawing, undo, etc.)
   useSocketListeners(socket);
@@ -149,18 +154,24 @@ const Canvas = () => {
         )}
 
         {/* Drawing area: canvas rendered using react-konva */}
-        <div
-          className="w-full max-w-6xl flex-1 h-full rounded-xl shadow-lg border bg-gray-100 dark:bg-gray-400 border-gray-300 dark:border-gray-700 overflow-hidden transition-transform duration-300 ease-in-out"
-          style={{ transformOrigin: "center center" }}
-        >
-          <DrawingStage
-            stageRef={stageRef} //  Reference to Konva stage
-            selectedTool={selectedTool} //  Current tool selected from toolbox
-            lines={lines} //  All saved lines
-            shapes={shapes} //  All saved shapes
-            currentLine={currentLine} //  Line currently being drawn
-            zoom={zoom}
-          />
+        <div className="flex w-full max-w-7xl flex-1 h-full gap-4">
+          {/* Canvas Area */}
+          <div
+            className="flex-1 rounded-2xl shadow-lg border bg-gray-100 dark:bg-gray-400 border-gray-300 dark:border-gray-700 overflow-hidden transition-transform duration-300 ease-in-out"
+            style={{ transformOrigin: "center center" }}
+          >
+            <DrawingStage
+              stageRef={stageRef}
+              selectedTool={selectedTool}
+              lines={lines}
+              shapes={shapes}
+              currentLine={currentLine}
+              zoom={zoom}
+            />
+          </div>
+
+          {/* Settings Panel */}
+          <SettingsPanel selectedTool={selectedTool} />
         </div>
       </div>
     </div>

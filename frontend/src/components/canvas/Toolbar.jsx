@@ -7,11 +7,7 @@ import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
 import ZoomControls from "./ZoomControls";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  deselectText,
-  toggleGrid,
-  updateTextContent,
-} from "@/store/drawingSlice";
+import { deselectText, toggleGrid } from "@/store/drawingSlice";
 import { useTextDeselect } from "@/hooks/useTextDeselect";
 
 /**
@@ -31,11 +27,6 @@ const Toolbar = ({ onUndo, onRedo, onClear, stageRef }) => {
   const dispatch = useDispatch();
 
   const showGrid = useSelector((state) => state.drawing.showGrid);
-  const selectedTextId = useSelector((state) => state.drawing.selectedTextId);
-  const texts = useSelector((state) => state.drawing.texts);
-  const selectedText = texts.find((t) => t.id === selectedTextId);
-
-  const shouldShowFontSizeControl = selectedText && selectedTextId;
 
   // Custom hook to deselect text on canvas click or Escape
   useTextDeselect(stageRef);
@@ -128,33 +119,6 @@ const Toolbar = ({ onUndo, onRedo, onClear, stageRef }) => {
           onCheckedChange={() => dispatch(toggleGrid())}
         />
       </div>
-
-      {shouldShowFontSizeControl && (
-        <div className="flex items-center space-x-2 mt-2 sm:mt-0">
-          <Label
-            htmlFor="font-size-input"
-            className="text-gray-700 dark:text-gray-300"
-          >
-            Font Size
-          </Label>
-          <input
-            id="font-size-input"
-            type="number"
-            min={6}
-            max={200}
-            value={selectedText.fontSize}
-            onChange={(e) =>
-              dispatch(
-                updateTextContent({
-                  id: selectedTextId,
-                  fontSize: parseInt(e.target.value, 10),
-                })
-              )
-            }
-            className="border px-2 py-1 rounded w-20 bg-white dark:bg-gray-600 text-black dark:text-white"
-          />
-        </div>
-      )}
     </div>
   );
 };

@@ -21,6 +21,7 @@ const initialState = {
     liveLines: [],
     currentFillColor: "transparent",
     selectedTool: "select",
+    currentStrokeWidth: 2,
 };
 
 const drawingSlice = createSlice({
@@ -269,6 +270,10 @@ const drawingSlice = createSlice({
         toggleGrid: (state) => {
             state.showGrid = !state.showGrid
         },
+
+        setStrokeWidth: (state, action) => {
+            state.currentStrokeWidth = action.payload
+        }
     },
 });
 
@@ -321,6 +326,7 @@ export const {
     resetFillColor,
     updateShapeFill,
     updateTextFill,
+    setStrokeWidth,
 } = drawingSlice.actions;
 
 export default drawingSlice.reducer;

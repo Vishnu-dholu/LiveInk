@@ -16,6 +16,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
     const currentText = useSelector((state) => state.drawing.currentText);
     const currentShape = useSelector((state) => state.drawing.currentShape);
     const currentFillColor = useSelector((state) => state.drawing.currentFillColor)
+    const currentStrokeWidth = useSelector((state) => state.drawing.currentStrokeWidth);
 
     const [isMouseDown, setIsMouseDown] = useState(false);  //  Track if mouse is being held down
 
@@ -167,7 +168,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
                     points: [...currentLine],
                     tool: selectedTool,
                     stroke: selectedTool === "pen" ? "black" : "#353839",
-                    strokeWidth: selectedTool === "pen" ? 3 : 1.8,
+                    strokeWidth: currentStrokeWidth,
                     opacity: selectedTool === "pen" ? 1 : 0.6,
                     dash: selectedTool === "pencil" ? [5, 5] : [],
                 };
@@ -182,6 +183,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
                 dispatch(drawShape(shapeWithTool));
                 socket.emit("drawShape", shapeWithTool);
                 dispatch(clearCurrentShape())
+                dispatch(resetFillColor());
             }
         } else if (selectedTool === "text" && currentText) {
             // Commit current text to Redux and socket
