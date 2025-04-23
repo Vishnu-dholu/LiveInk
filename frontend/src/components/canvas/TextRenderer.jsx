@@ -1,6 +1,12 @@
 // Import Konva's Text component for rendering text on canvas
-import { setSelectedTextId } from "@/store/drawingSlice";
-import { Text } from "react-konva";
+import { useTextDeselect } from "@/hooks/useTextDeselect";
+import {
+  deselectText,
+  setSelectedTextId,
+  updateTextContent,
+} from "@/store/drawingSlice";
+import { useEffect, useRef } from "react";
+import { Text, Transformer } from "react-konva";
 // Import Redux hook to access state from the store
 import { useDispatch, useSelector } from "react-redux";
 
@@ -13,12 +19,14 @@ import { useDispatch, useSelector } from "react-redux";
  * - Displaying temporary "currentText" during creation
  */
 
-const TextRenderer = ({ isEditingText, editTextProps, onEdit }) => {
+const TextRenderer = ({ isEditingText, editTextProps, onEdit, stageRef }) => {
   // All saved text elements from Redux store
   const texts = useSelector((state) => state.drawing.texts);
   // A temporary text object that is currently being created
   const currentText = useSelector((state) => state.drawing.currentText);
   const dispatch = useDispatch();
+
+  useTextDeselect(stageRef);
 
   /**
    * Handles when a text object is dragged and dropped to a new position.
@@ -34,8 +42,7 @@ const TextRenderer = ({ isEditingText, editTextProps, onEdit }) => {
     });
   };
 
-  const handleTextDoubleClick = (t) => {
-    dispatch(setSelectedTextId(t.id));
+  const handleTextDlbClick = (t) => {
     onEdit(t);
   };
 
@@ -62,8 +69,10 @@ const TextRenderer = ({ isEditingText, editTextProps, onEdit }) => {
             y={t.y} //  Y position on canvas
             fontSize={t.fontSize}
             fill={t.fill || "black"}
+            width={t.width || undefined}
             draggable
-            onDblClick={() => handleTextDoubleClick(t)} //  Double-click triggers edit mode
+            onClick={() => dispatch(setSelectedTextId(t.id))}
+            onDblClick={() => handleTextDlbClick(t)}
             onDragEnd={(e) => handleTextDragEnd(e, t)} //  Handle repositioning after drag
           />
         );

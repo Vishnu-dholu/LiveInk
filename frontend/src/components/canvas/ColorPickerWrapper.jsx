@@ -1,4 +1,9 @@
-import { setFillColor, updateTextFill } from "@/store/drawingSlice";
+import {
+  deselectText,
+  resetFillColor,
+  setFillColor,
+  updateTextFill,
+} from "@/store/drawingSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { ChromePicker } from "react-color";
 import { socket } from "@/lib/socket";
@@ -17,6 +22,10 @@ const ColorPickerWrapper = ({ onClose }) => {
     if (selectedTextId) {
       dispatch(updateTextFill({ id: selectedTextId, fill: hex }));
       socket.emit("text:fill", { id: selectedTextId, fill: hex });
+
+      dispatch(resetFillColor());
+      // Deselect the text after updating the color
+      dispatch(deselectText());
     }
   };
 

@@ -5,6 +5,7 @@ import {
     updateCurrentText,
     commitCurrentText,
     updateTextPosition,
+    setSelectedTool,
 } from "@/store/drawingSlice";
 import { v4 as uuidv4 } from "uuid";
 
@@ -63,8 +64,7 @@ const useTextEditing = (stageRef, socket) => {
             dispatch(updateCurrentText(newText));
             socket.emit("text:start", newText);
 
-            // Wait for DOM update then trigger editing
-            setTimeout(() => handleEditText(newText), 0)
+            dispatch(setSelectedTool("select"));
         }
     };
 

@@ -1,4 +1,4 @@
-import { Layer, Line } from "react-konva";
+import { Layer, Line, Rect } from "react-konva";
 import { useSelector } from "react-redux";
 
 /**

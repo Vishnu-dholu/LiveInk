@@ -1,5 +1,5 @@
 // Import Konva components
-import { Stage, Layer } from "react-konva";
+import { Stage, Layer, Rect } from "react-konva";
 
 // Renderers for different types of drawable elements
 import LineRenderer from "./LineRenderer";
@@ -9,7 +9,7 @@ import TextRenderer from "./TextRenderer";
 // Custom hooks for handling canvas interactions
 import useCanvasEvents from "../../hooks/useCanvasEvents"; //  Manages mouse drawing events
 import useTextEditing from "../../hooks/useTextEditing"; //  Manages in-place text editing logic
-import { setStagePosition } from "@/store/drawingSlice";
+import { deselectText, setStagePosition } from "@/store/drawingSlice";
 
 // Socket instance for real-time syncing
 import { socket } from "@/lib/socket";
@@ -94,6 +94,7 @@ const DrawingStage = ({
               handleEditText(updatedText);
             }
           }}
+          stageRef={stageRef}
           socket={socket}
         />
       </Layer>

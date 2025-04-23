@@ -20,6 +20,7 @@ const initialState = {
     liveShapes: [],
     liveLines: [],
     currentFillColor: "transparent",
+    selectedTool: "select",
 };
 
 const drawingSlice = createSlice({
@@ -157,6 +158,14 @@ const drawingSlice = createSlice({
             if (target) {
                 Object.assign(target, updates);
             }
+        },
+
+        deselectText: (state) => {
+            state.selectedTextId = null
+        },
+
+        setSelectedTool: (state, action) => {
+            state.selectedTool = action.payload;
         },
 
         // ------- POSITION UPDATES -------
@@ -298,6 +307,8 @@ export const {
     updateCurrentText,
     commitCurrentText,
     updateTextContent,
+    deselectText,
+    setSelectedTool,
     setSelectedShapeId,
     updateShapeTransform,
     updateShapePosition,

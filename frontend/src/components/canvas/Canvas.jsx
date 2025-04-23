@@ -15,6 +15,7 @@ import {
   updateCurrentLine,
   updateCurrentShape,
   setStagePosition,
+  setSelectedTool,
 } from "@/store/drawingSlice";
 // Socket instance for real-time collaboration
 import { socket } from "@/lib/socket";
@@ -30,7 +31,7 @@ const Canvas = () => {
   // Ref to the Konva stage element
   const stageRef = useRef();
   // Tracks the currently selected drawing tool
-  const [selectedTool, setSelectedTool] = useState("select");
+  const selectedTool = useSelector((state) => state.drawing.selectedTool);
 
   // Redux state: all drawn lines
   const lines = useSelector((state) => state.drawing.lines);
@@ -84,7 +85,7 @@ const Canvas = () => {
 
   // Handler for tool selection from toolbox
   const handleSelectTool = (tool) => {
-    setSelectedTool(tool);
+    dispatch(setSelectedTool(tool));
     if (tool === "paint") {
       setIsColorPickerOpen(true); // Open color picker when paint tool is selected
     } else {
@@ -131,6 +132,7 @@ const Canvas = () => {
             onUndo={handleUndo}
             onRedo={handleRedo}
             onClear={handleClear}
+            stageRef={stageRef}
           />
         </div>
 
