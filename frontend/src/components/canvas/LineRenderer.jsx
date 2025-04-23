@@ -14,9 +14,10 @@ const LineRenderer = ({ lines, currentLine, selectedTool }) => {
 
   // Helper function to determine line style based on tool
   const getLineProps = (tool) => {
+    const dashSize = currentStrokeWidth * 2;
     return {
       tension: tool === "pen" ? 0.5 : 0.2, //  Smoothing factor: pen is smoother
-      dash: tool === "pencil" ? [5, 5] : [], //  Dashed effect for pencil
+      dash: tool === "pencil" ? [dashSize, dashSize] : [], //  Dashed effect for pencil
       strokeWidth: currentStrokeWidth, //  Thickness based on tool
       stroke: tool === "pen" ? "black" : "#353839", // Stroke color based on tool
     };
@@ -32,7 +33,11 @@ const LineRenderer = ({ lines, currentLine, selectedTool }) => {
           stroke={line.stroke}
           strokeWidth={line.strokeWidth}
           tension={line.tool === "pen" ? 0.5 : 0.2} //  Smoothing factor: pen is smoother
-          dash={line.tool === "pencil" ? [5, 5] : []} //  Dashed effect for pencil
+          dash={
+            line.tool === "pencil"
+              ? [line.strokeWidth * 2, line.strokeWidth * 2]
+              : []
+          } //  Dashed effect for pencil
           lineCap="round" //  Rounded line ends
           lineJoin="round" //  Smooth corner joints
         />
@@ -56,7 +61,11 @@ const LineRenderer = ({ lines, currentLine, selectedTool }) => {
           stroke={line.tool === "pen" ? "black" : "#353839"}
           strokeWidth={line.tool === "pen" ? 3 : 1.8}
           opacity={line.tool === "pen" ? 1 : 0.6}
-          dash={line.tool === "pencil" ? [5, 5] : []}
+          dash={
+            line.tool === "pencil"
+              ? [line.strokeWidth * 2, line.strokeWidth * 2]
+              : []
+          }
           tension={0.5}
           lineCap="round"
           globalCompositeOperation={

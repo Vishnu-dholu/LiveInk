@@ -154,7 +154,7 @@ const Canvas = () => {
         )}
 
         {/* Drawing area: canvas rendered using react-konva */}
-        <div className="flex w-full max-w-7xl flex-1 h-full gap-4">
+        <div className="flex w-full max-w-fit flex-1 gap-2 overflow-hidden">
           {/* Canvas Area */}
           <div
             className="flex-1 rounded-2xl shadow-lg border bg-gray-100 dark:bg-gray-400 border-gray-300 dark:border-gray-700 overflow-hidden transition-transform duration-300 ease-in-out"
