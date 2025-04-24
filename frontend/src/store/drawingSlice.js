@@ -22,6 +22,9 @@ const initialState = {
     currentFillColor: "transparent",
     selectedTool: "select",
     currentStrokeWidth: 2,
+    fontFamily: "Arial",
+    fontStyle: "normal",
+    fontSize: 17,
 };
 
 const drawingSlice = createSlice({
@@ -161,12 +164,38 @@ const drawingSlice = createSlice({
             }
         },
 
+        updateTextFontStyle: (state, action) => {
+            const { id, fontStyle } = action.payload
+            const text = state.texts.find((t) => t.id === id)
+            if (text) text.fontStyle = fontStyle
+        },
+
+        updateTextFontFamily: (state, action) => {
+            const { id, fontFamily } = action.payload
+            const text = state.texts.find((t) => t.id === id)
+            if (text) text.fontFamily = fontFamily
+        },
+
+        updateTextFontSize: (state, action) => {
+            const { id, fontSize } = action.payload
+            const text = state.texts.find(t => t.id === id)
+            if (text) text.fontSize = fontSize
+        },
+
         deselectText: (state) => {
             state.selectedTextId = null
         },
 
         setSelectedTool: (state, action) => {
             state.selectedTool = action.payload;
+        },
+
+        setFontFamily: (state, action) => {
+            state.fontFamily = action.payload
+        },
+
+        setFontStyle: (state, action) => {
+            state.fontStyle = action.payload
         },
 
         // ------- POSITION UPDATES -------
@@ -277,6 +306,21 @@ const drawingSlice = createSlice({
     },
 });
 
+export const updateTextFontStyleAndEmit = ({ id, fontStyle }) => (dispatch, _, { socket }) => {
+    dispatch(updateTextFontStyle({ id, fontStyle }));
+    socket.emit("text:updateFontStyle", { id, fontStyle });
+};
+
+export const updateTextFontFamilyAndEmit = ({ id, fontFamily }) => (dispatch, getState, { socket }) => {
+    dispatch(updateTextFontFamily({ id, fontFamily }));
+    socket.emit("text:updateFontFamily", { id, fontFamily });
+};
+
+export const updateTextFontSizeAndEmit = ({ id, fontSize }) => (dispatch, _, { socket }) => {
+    dispatch(updateTextFontSize({ id, fontSize }));
+    socket.emit("text:updateFontSize", { id, fontSize });
+};
+
 // ------- SNAPSHOT HELPERS -------
 
 // Creates a shallow copy of drawable elements for undo/redo
@@ -314,6 +358,11 @@ export const {
     updateTextContent,
     deselectText,
     setSelectedTool,
+    updateTextFontStyle,
+    updateTextFontFamily,
+    updateTextFontSize,
+    setFontFamily,
+    setFontStyle,
     setSelectedShapeId,
     updateShapeTransform,
     updateShapePosition,

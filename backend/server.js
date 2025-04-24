@@ -117,6 +117,18 @@ io.on("connection", (socket) => {
         socket.broadcast.emit("text:commit", textObj);
     });
 
+    socket.on("text:updateFontFamily", ({ id, fontFamily }) => {
+        socket.broadcast.emit("text:updateFontFamily", { id, fontFamily })
+    })
+
+    socket.on("text:updateFontStyle", ({ id, fontStyle }) => {
+        socket.broadcast.emit("text:updateFontStyle", { id, fontStyle })
+    })
+
+    socket.on("text:updateFontSize", ({ id, fontSize }) => {
+        socket.broadcast.emit("text:updateFontSize", { id, fontSize });
+    });
+
     socket.on("erase", (coords) => {
         socket.broadcast.emit("erase", coords);
     });

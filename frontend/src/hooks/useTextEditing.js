@@ -5,7 +5,6 @@ import {
     updateCurrentText,
     commitCurrentText,
     updateTextPosition,
-    setSelectedTool,
 } from "@/store/drawingSlice";
 import { v4 as uuidv4 } from "uuid";
 
@@ -59,12 +58,12 @@ const useTextEditing = (stageRef, socket) => {
                 fontSize: 17,
                 draggable: true,
                 fill: currentFillColor || "black",
+                fontStyle: "normal",
+                fontFamily: "Arial",
             };
 
             dispatch(updateCurrentText(newText));
             socket.emit("text:start", newText);
-
-            dispatch(setSelectedTool("select"));
         }
     };
 

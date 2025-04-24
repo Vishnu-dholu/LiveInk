@@ -190,7 +190,7 @@ const useCanvasEvent = ({ selectedTool, stageRef, isEditingText }) => {
             const committedText = { ...currentText };
             dispatch(commitCurrentText());
             socket.emit("text:commit", committedText);
-            dispatch(setSelectedTool("select"))
+            // dispatch(setSelectedTool("select"))
         }
     };
 

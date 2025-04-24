@@ -1,4 +1,4 @@
-import { addLine, clearCurrentShape, commitCurrentText, drawShape, removeLineAt, setFillColor, setLiveLines, setLiveShapes, updateCurrentLine, updateCurrentShape, updateCurrentText, updateShapeFill, updateShapeTransform, updateTextContent, updateTextFill } from "@/store/drawingSlice";
+import { addLine, clearCurrentShape, commitCurrentText, drawShape, removeLineAt, setFillColor, setLiveLines, setLiveShapes, updateCurrentLine, updateCurrentShape, updateCurrentText, updateShapeFill, updateShapeTransform, updateTextContent, updateTextFill, updateTextFontFamily, updateTextFontSize, updateTextFontStyle } from "@/store/drawingSlice";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { clearCanvas, redoAction, undoAction } from "../store/drawingSlice";
@@ -71,6 +71,18 @@ export const useSocketListeners = (socket) => {
     const handleTextCommit = (textObj) => {
         dispatch(updateCurrentText(textObj));   //  Set text as current text
         dispatch(commitCurrentText());          //  Commit it to global state
+    }
+
+    const handleUpdateFontStyle = ({ id, fontStyle }) => {
+        dispatch(updateTextFontStyle({ id, fontStyle }))
+    }
+
+    const handleUpdateFontFamily = ({ id, fontFamily }) => {
+        dispatch(updateTextFontFamily({ id, fontFamily }))
+    }
+
+    const handleUpdateFontSize = ({ id, fontSize }) => {
+        dispatch(updateTextFontSize({ id, fontSize }))
     }
 
     /**
@@ -147,6 +159,10 @@ export const useSocketListeners = (socket) => {
         socket.on("shape:fill", handleShapeFill)
         socket.on("text:fill", handleTextFill)
 
+        socket.on("text:updateFontStyle", handleUpdateFontStyle)
+        socket.on("text:updateFontFamily", handleUpdateFontFamily)
+        socket.on("text:updateFontSize", handleUpdateFontSize)
+
         // Cleanup listeners on unmount or re-init
         return () => {
             socket.off("draw", handleDraw)
@@ -167,6 +183,10 @@ export const useSocketListeners = (socket) => {
             socket.off("color:change", handleColorChange)
             socket.off("shape:fill", handleShapeFill)
             socket.off("text:fill", handleTextFill)
+
+            socket.off("text:updateFontStyle", handleUpdateFontStyle)
+            socket.off("text:updateFontFamily", handleUpdateFontFamily)
+            socket.off("text:updateFontSize", handleUpdateFontSize)
         }
-    }, [dispatch])
+    }, [dispatch, socket])
 }

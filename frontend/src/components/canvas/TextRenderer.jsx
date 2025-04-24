@@ -1,12 +1,6 @@
 // Import Konva's Text component for rendering text on canvas
-import { useTextDeselect } from "@/hooks/useTextDeselect";
-import {
-  deselectText,
-  setSelectedTextId,
-  updateTextContent,
-} from "@/store/drawingSlice";
-import { useEffect, useRef } from "react";
-import { Text, Transformer } from "react-konva";
+import { setSelectedTextId } from "@/store/drawingSlice";
+import { Text } from "react-konva";
 // Import Redux hook to access state from the store
 import { useDispatch, useSelector } from "react-redux";
 
@@ -24,9 +18,8 @@ const TextRenderer = ({ isEditingText, editTextProps, onEdit, stageRef }) => {
   const texts = useSelector((state) => state.drawing.texts);
   // A temporary text object that is currently being created
   const currentText = useSelector((state) => state.drawing.currentText);
+  const fontSize = useSelector((state) => state.drawing.fontSize);
   const dispatch = useDispatch();
-
-  useTextDeselect(stageRef);
 
   /**
    * Handles when a text object is dragged and dropped to a new position.
@@ -68,6 +61,8 @@ const TextRenderer = ({ isEditingText, editTextProps, onEdit, stageRef }) => {
             x={t.x} //  X position on canvas
             y={t.y} //  Y position on canvas
             fontSize={t.fontSize}
+            fontStyle={t.fontStyle || "normal"}
+            fontFamily={t.fontFamily || "Arial"}
             fill={t.fill || "black"}
             width={t.width || undefined}
             draggable
