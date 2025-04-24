@@ -8,20 +8,20 @@ const SettingsPanel = ({ selectedTool }) => {
   const selectedTextId = useSelector((state) => state.drawing.selectedTextId);
 
   const showStrokeControls = ["pen", "pencil"].includes(selectedTool);
-  const showTextControls = selectedTool === "text" || !!selectedTextId;
-
-  const hasSettings = showStrokeControls || showTextControls;
+  const showTextControls =
+    selectedTool === "text" || (selectedTool === "select" && selectedTextId);
+  const hasSettings = showTextControls || showStrokeControls;
   return (
     <div className="sm:w-56 w-auto h-full rounded-2xl bg-white dark:bg-gray-800 shadow-lg p-4 flex flex-col gap-4 border border-gray-200 dark:border-gray-700 overflow-y-auto">
       {hasSettings ? (
         <>
-          {showStrokeControls && <StrokeWidthPicker />}
           {showTextControls && (
             <>
               <FontSizeControl />
               <FontStyleSelector />
             </>
           )}
+          {showStrokeControls && <StrokeWidthPicker />}
         </>
       ) : (
         // Friendly placeholder when no settings are available for selected tool

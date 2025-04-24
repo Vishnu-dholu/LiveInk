@@ -1,6 +1,7 @@
 // Importing React hooks and necessary functions
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { shallowEqual } from "react-redux";
 
 // UI components
 import Toolbar from "./Toolbar"; //  Top-bar with undo, redo, clear
@@ -21,7 +22,6 @@ import {
 import { socket } from "@/lib/socket";
 import { useSocketListeners } from "@/hooks/useSocketListeners";
 import ColorPickerWrapper from "./ColorPickerWrapper";
-import StrokeWidthPicker from "./StrokeWidthPicker";
 import SettingsPanel from "./SettingsPanel";
 
 // Constants for large virtual canvas
@@ -33,20 +33,23 @@ const Canvas = () => {
   // Ref to the Konva stage element
   const stageRef = useRef();
   // Tracks the currently selected drawing tool
-  const selectedTool = useSelector((state) => state.drawing.selectedTool);
+  const selectedTool = useSelector(
+    (state) => state.drawing.selectedTool,
+    shallowEqual
+  );
 
   // Redux state: all drawn lines
-  const lines = useSelector((state) => state.drawing.lines);
+  const lines = useSelector((state) => state.drawing.lines, shallowEqual);
   // Redux state: all drawn shapes
-  const shapes = useSelector((state) => state.drawing.shapes);
+  const shapes = useSelector((state) => state.drawing.shapes, shallowEqual);
   // Redux state: the current line being drawn (live)
-  const currentLine = useSelector((state) => state.drawing.currentLine);
-  const zoom = useSelector((state) => state.drawing.zoom);
+  const currentLine = useSelector(
+    (state) => state.drawing.currentLine,
+    shallowEqual
+  );
+  const zoom = useSelector((state) => state.drawing.zoom, shallowEqual);
 
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false); // Manage color picker visibility
-  const [isLineResizerOpen, setIsLineResizerOpen] = useState(false);
-
-  const toggleLineResizer = () => setIsLineResizerOpen((prev) => !prev);
 
   // Register socket listeners (text, drawing, undo, etc.)
   useSocketListeners(socket);
@@ -89,38 +92,54 @@ const Canvas = () => {
   }, []);
 
   // Handler for tool selection from toolbox
-  const handleSelectTool = (tool) => {
-    dispatch(setSelectedTool(tool));
-    if (tool === "paint") {
-      setIsColorPickerOpen(true); // Open color picker when paint tool is selected
-    } else {
-      setIsColorPickerOpen(false); // Close color picker when other tool is selected
-    }
-  };
+  const handleSelectTool = useCallback(
+    (tool) => {
+      dispatch(setSelectedTool(tool));
+      if (tool === "paint") {
+        setIsColorPickerOpen(true); // Open color picker when paint tool is selected
+      } else {
+        setIsColorPickerOpen(false); // Close color picker when other tool is selected
+      }
+    },
+    [dispatch]
+  );
 
   // Undo action and emit to other users via socket
-  const handleUndo = () => {
+  const handleUndo = useCallback(() => {
     dispatch(undoAction());
     dispatch(updateCurrentLine([]));
     dispatch(updateCurrentShape([]));
     socket.emit("undo", { userId: socket.id });
-  };
+  }, [dispatch]);
 
   // Redo action and emit to other users via socket
-  const handleRedo = () => {
+  const handleRedo = useCallback(() => {
     dispatch(redoAction());
     dispatch(updateCurrentLine([]));
     dispatch(updateCurrentShape([]));
     socket.emit("redo", { userId: socket.id });
-  };
+  }, [dispatch]);
 
   // Clear canvas and emit to other users
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     dispatch(clearCanvas());
     dispatch(updateCurrentLine([]));
     dispatch(updateCurrentShape([]));
     socket.emit("clear");
-  };
+  }, [dispatch]);
+
+  // Memoize DrawingStage props to prevent unnecessary re-renders
+  const drawingStageProps = useMemo(
+    () => ({
+      stageRef,
+      selectedTool,
+      lines,
+      shapes,
+      currentLine,
+      zoom,
+    }),
+    [selectedTool, lines, shapes, currentLine, zoom]
+  );
 
   return (
     <div className="flex flex-col md:flex-row h-full w-full bg-gray-300 dark:bg-gray-900 overflow-hidden relative">
@@ -160,14 +179,7 @@ const Canvas = () => {
             className="flex-1 rounded-2xl shadow-lg border bg-gray-100 dark:bg-gray-400 border-gray-300 dark:border-gray-700 overflow-hidden transition-transform duration-300 ease-in-out"
             style={{ transformOrigin: "center center" }}
           >
-            <DrawingStage
-              stageRef={stageRef}
-              selectedTool={selectedTool}
-              lines={lines}
-              shapes={shapes}
-              currentLine={currentLine}
-              zoom={zoom}
-            />
+            <DrawingStage {...drawingStageProps} />
           </div>
 
           {/* Settings Panel */}
