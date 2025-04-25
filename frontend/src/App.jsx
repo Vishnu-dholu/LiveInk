@@ -1,11 +1,25 @@
-import React from "react";
-import Canvas from "./components/Canvas/Canvas";
+import { Route, Routes } from "react-router-dom";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import CanvasPage from "./pages/CanvasPage";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
+import HomePage from "./pages/HomePage";
 
 const App = () => {
   return (
-    <div className="h-screen flex flex-col items-center justify-center bg-gray-200 dark:bg-gray-900">
-      <Canvas />
-    </div>
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route
+        path="/canvas"
+        element={
+          <ProtectedRoute>
+            <CanvasPage />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
   );
 };
 

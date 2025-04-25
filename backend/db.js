@@ -1,4 +1,5 @@
-import { Pool } from "pg";
+import pkg from "pg"; // Default import from 'pg' (CommonJS)
+const { Pool } = pkg; // Access 'Pool' from the default export
 import { config } from "dotenv";
 
 config();

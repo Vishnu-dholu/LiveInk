@@ -1,7 +1,8 @@
 import express from "express"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
-import pool from "../db"
+import pool from "../db.js"
+import { verifyToken } from "../middleware/authMiddleware.js"
 
 const router = express.Router()
 const JWT_SECRET = process.env.JWT_SECRET || "Your_secret_key"
@@ -19,11 +20,11 @@ router.post("/register", async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, salt)
 
         const newUser = await pool.query(
-            "INSERT INTO users (username, email, password) VALUES ($1, $2 $3) RETURNING *",
+            "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING *",
             [username, email, hashedPassword]
         )
 
-        const token = jwt.sign({ id: newUser.rows[0].id }, JWT_SECRET, null)
+        const token = jwt.sign({ id: newUser.rows[0].id }, JWT_SECRET)
 
         res.status(201).json({
             token, user: {
@@ -49,7 +50,7 @@ router.post("/login", async (req, res) => {
         const isMatch = await bcrypt.compare(password, user.password)
         if (!isMatch) return res.status(400).json({ error: "Invalid credentials" })
 
-        const token = jwt.sign({ id: user.id }, JWT_SECRET, null)
+        const token = jwt.sign({ id: user.id }, JWT_SECRET)
 
         res.json({
             token,
@@ -61,6 +62,16 @@ router.post("/login", async (req, res) => {
         })
     } catch (err) {
         res.status(500).json({ error: "Login failed" })
+    }
+})
+
+router.get("/me", verifyToken, async (req, res) => {
+    try {
+        const user = await pool.query("SELECT id, username, email FROM users WHERE id = $1", [req.user.id])
+        res.json(user.rows[0])
+    } catch (err) {
+        console.error(err)
+        res.status(500).json({ error: "Failed to fetch user data" })
     }
 })
 

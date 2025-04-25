@@ -3,8 +3,8 @@ import { createServer } from "http"    //  Create an HTTP server
 import { Server } from "socket.io"     // Import Socket.IO for WebSocket communication
 import cors from "cors"
 import dotenv from "dotenv"
-import authRoutes from "./routes/authRoutes"
-import pool from "./db"
+import authRoutes from "./routes/authRoutes.js"
+import pool from "./db.js"
 
 dotenv.config()
 
@@ -13,15 +13,17 @@ const server = createServer(app)    //  Create an HTTP server
 const io = new Server(server, {
     cors: {
         origin: "http://localhost:5173",    // Allow connections from the frontend
-        methods: ["GET", "POST"]    // Allow GET and POST requests
+        methods: ["GET", "POST"],    // Allow GET and POST requests
+        credentials: true,
     }
 })
 
 //  Middleware to enable CORS and JSON parsing
-app.use(cors())
+app.use(cors({ origin: "http://localhost:5173", credentials: true }))
 app.use(json())
 
 app.use("/api/auth", authRoutes)
+// app.use("/api/user", userRoutes)
 
 io.on("connection", (socket) => {
     console.log(`A user connected: ${socket.id}`)
