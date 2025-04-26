@@ -3,6 +3,8 @@ import { Label } from "@/components/ui/label";
 import { HomeIcon, MoonIcon, SunIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { FcGoogle } from "react-icons/fc";
+import { FaGithub } from "react-icons/fa";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -122,6 +124,28 @@ const LoginPage = () => {
           >
             {isLoading ? "Logging in..." : "Login"}
           </Button>
+
+          <div className="flex flex-col gap-3 mt-6">
+            <a href="http://localhost:5000/auth/google">
+              <Button
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-100 text-gray-900 font-semibold hover:bg-gray-200 transition"
+              >
+                <FcGoogle className="w-5 h-5" />
+                Continue with Google
+              </Button>
+            </a>
+
+            <a href="http://localhost:5000/auth/github">
+              <Button
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white font-semibold hover:bg-gray-800 transition"
+              >
+                <FaGithub className="w-5 h-5" />
+                Continue with Github
+              </Button>
+            </a>
+          </div>
 
           <p className="text-center mt-6 text-sm text-gray-700 dark:text-gray-300">
             Don’t have an account?

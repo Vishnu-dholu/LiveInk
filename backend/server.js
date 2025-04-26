@@ -4,11 +4,23 @@ import { Server } from "socket.io"     // Import Socket.IO for WebSocket communi
 import cors from "cors"
 import dotenv from "dotenv"
 import authRoutes from "./routes/authRoutes.js"
+import oauthRoutes from "./routes/oauthRoutes.js"
 import pool from "./db.js"
+import initializePassport from "./config/passport.js"
+import session from "express-session"
+import passport from "passport"
 
 dotenv.config()
+initializePassport()
 
 const app = express()   //  Initialize Express.js app
+
+app.use(session({
+    secret: process.env.SESSION_SECRET || "some_secret",
+    resave: false,
+    saveUninitialized: false,
+}))
+
 const server = createServer(app)    //  Create an HTTP server
 const io = new Server(server, {
     cors: {
@@ -20,10 +32,13 @@ const io = new Server(server, {
 
 //  Middleware to enable CORS and JSON parsing
 app.use(cors({ origin: "http://localhost:5173", credentials: true }))
-app.use(json())
+app.use(express.json())
+app.use(passport.initialize())
+app.use(passport.session())
 
 app.use("/api/auth", authRoutes)
 // app.use("/api/user", userRoutes)
+app.use("/auth", oauthRoutes)
 
 io.on("connection", (socket) => {
     console.log(`A user connected: ${socket.id}`)

@@ -3,6 +3,8 @@ import { Label } from "@/components/ui/label";
 import { HomeIcon, MoonIcon, SunIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { FcGoogle } from "react-icons/fc";
+import { FaGithub } from "react-icons/fa";
 
 const SignupPage = () => {
   const [username, setUsername] = useState("");
@@ -130,17 +132,38 @@ const SignupPage = () => {
           >
             Sign Up
           </Button>
-
-          <p className="text-center mt-6 text-sm text-gray-700 dark:text-gray-300">
-            Already have an account?
-            <Link
-              to="/login"
-              className="text-blue-600 dark:text-blue-400 underline ml-1"
-            >
-              Log In
-            </Link>
-          </p>
         </form>
+        <div className="flex flex-col gap-3 mt-6">
+          <a href="http://localhost:5000/auth/google">
+            <Button
+              variant="outline"
+              className="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-100 text-gray-900 font-semibold hover:bg-gray-200 transition"
+            >
+              <FcGoogle className="w-5 h-5" />
+              Continue with Google
+            </Button>
+          </a>
+
+          <a href="http://localhost:5000/auth/github">
+            <Button
+              variant="outline"
+              className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white font-semibold hover:bg-gray-800 transition"
+            >
+              <FaGithub className="w-5 h-5" />
+              Continue with Github
+            </Button>
+          </a>
+        </div>
+
+        <p className="text-center mt-6 text-sm text-gray-700 dark:text-gray-300">
+          Already have an account?
+          <Link
+            to="/login"
+            className="text-blue-600 dark:text-blue-400 underline ml-1"
+          >
+            Log In
+          </Link>
+        </p>
       </div>
     </div>
   );
