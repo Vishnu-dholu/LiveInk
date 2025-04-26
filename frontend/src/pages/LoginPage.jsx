@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
+import { FiEye, FiEyeOff } from "react-icons/fi";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -14,6 +15,8 @@ const LoginPage = () => {
     localStorage.getItem("theme") === "dark"
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -36,7 +39,7 @@ const LoginPage = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, rememberMe }),
       });
 
       if (response.ok) {
@@ -103,18 +106,38 @@ const LoginPage = () => {
             />
           </div>
 
-          <div className="mb-8">
+          <div className="mb-8 relative">
             <Label htmlFor="password" className="block mb-2 font-medium">
               Password
             </Label>
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               id="password"
               className="w-full p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-11 transform -translate-y-1/2 text-gray-600 dark:text-gray-300"
+            >
+              {showPassword ? <FiEyeOff size={20} /> : <FiEye size={20} />}
+            </button>
+          </div>
+
+          <div className="mb-4 flex items-center">
+            <input
+              type="checkbox"
+              id="remember"
+              checked={rememberMe}
+              onChange={() => setRememberMe(!rememberMe)}
+              className="mr-2 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <Label htmlFor="remember" className="text-sm">
+              Remember me
+            </Label>
           </div>
 
           <Button
@@ -124,39 +147,38 @@ const LoginPage = () => {
           >
             {isLoading ? "Logging in..." : "Login"}
           </Button>
-
-          <div className="flex flex-col gap-3 mt-6">
-            <a href="http://localhost:5000/auth/google">
-              <Button
-                variant="outline"
-                className="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-100 text-gray-900 font-semibold hover:bg-gray-200 transition"
-              >
-                <FcGoogle className="w-5 h-5" />
-                Continue with Google
-              </Button>
-            </a>
-
-            <a href="http://localhost:5000/auth/github">
-              <Button
-                variant="outline"
-                className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white font-semibold hover:bg-gray-800 transition"
-              >
-                <FaGithub className="w-5 h-5" />
-                Continue with Github
-              </Button>
-            </a>
-          </div>
-
-          <p className="text-center mt-6 text-sm text-gray-700 dark:text-gray-300">
-            Don’t have an account?
-            <Link
-              to="/signup"
-              className="text-blue-600 dark:text-blue-400 underline ml-1"
-            >
-              Sign Up
-            </Link>
-          </p>
         </form>
+        <div className="flex flex-col gap-3 mt-6">
+          <a href="http://localhost:5000/auth/google">
+            <Button
+              variant="outline"
+              className="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-100 text-gray-900 font-semibold hover:bg-gray-200 transition"
+            >
+              <FcGoogle className="w-5 h-5" />
+              Continue with Google
+            </Button>
+          </a>
+
+          <a href="http://localhost:5000/auth/github">
+            <Button
+              variant="outline"
+              className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white font-semibold hover:bg-gray-800 transition"
+            >
+              <FaGithub className="w-5 h-5" />
+              Continue with Github
+            </Button>
+          </a>
+        </div>
+
+        <p className="text-center mt-6 text-sm text-gray-700 dark:text-gray-300">
+          Don’t have an account?
+          <Link
+            to="/signup"
+            className="text-blue-600 dark:text-blue-400 underline ml-1"
+          >
+            Sign Up
+          </Link>
+        </p>
       </div>
     </div>
   );

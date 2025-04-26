@@ -176,7 +176,7 @@ const Canvas = () => {
         <div className="flex w-full max-w-fit flex-1 gap-2 overflow-hidden">
           {/* Canvas Area */}
           <div
-            className="flex-1 rounded-2xl shadow-lg border bg-gray-100 dark:bg-gray-400 border-gray-300 dark:border-gray-700 overflow-hidden transition-transform duration-300 ease-in-out"
+            className="flex-1 rounded-2xl shadow-lg border bg-[radial-gradient(#d4d4d4_1px,transparent_1px)] bg-[size:20px_20px] dark:bg-[radial-gradient(#4b5563_1px,transparent_1px)] overflow-hidden transition-transform duration-300 ease-in-out"
             style={{ transformOrigin: "center center" }}
           >
             <DrawingStage {...drawingStageProps} />

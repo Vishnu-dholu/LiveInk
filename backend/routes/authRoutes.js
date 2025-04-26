@@ -41,16 +41,19 @@ router.post("/register", async (req, res) => {
 
 // Login endpoint
 router.post("/login", async (req, res) => {
-    const { email, password } = req.body
+    const { email, password, rememberMe } = req.body
     try {
         const userRes = await pool.query("SELECT * FROM users WHERE email = $1", [email])
         const user = userRes.rows[0]
+
         if (!user) return res.status(400).json({ error: "User not found" })
 
         const isMatch = await bcrypt.compare(password, user.password)
         if (!isMatch) return res.status(400).json({ error: "Invalid credentials" })
 
-        const token = jwt.sign({ id: user.id }, JWT_SECRET)
+        const token = jwt.sign({ id: user.id }, JWT_SECRET, {
+            expiresIn: rememberMe ? "30d" : "1h"
+        })
 
         res.json({
             token,

@@ -44,7 +44,10 @@ const Toolbox = ({ onSelectTool, activeTool }) => {
   return (
     // TooltipProvider wraps all tooltips for consistency
     <TooltipProvider>
-      <div className="grid grid-cols-4 md:grid-cols-1 md:flex md:flex-col items-center justify-items-center md:items-center md:justify-center gap-2 p-2 bg-gray-600 md:bg-white dark:md:bg-gray-700 rounded-2xl md:rounded-2xl md:border md:border-gray-300 dark:md:border-gray-600 shadow-none md:shadow-lg w-full md:w-auto mx-auto">
+      <div
+        // className="grid grid-cols-4 md:grid-cols-1 md:flex md:flex-col items-center justify-items-center md:items-center md:justify-center gap-2 p-2 bg-gray-600 md:bg-white dark:md:bg-gray-700 rounded-2xl md:rounded-2xl md:border md:border-gray-300 dark:md:border-gray-600 shadow-none md:shadow-lg w-full md:w-auto mx-auto"
+        className="grid grid-cols-4 md:grid-cols-1 md:flex md:flex-col items-center justify-items-center md:items-center md:justify-center gap-2 p-2 bg-gray-100 dark:bg-gray-800 rounded-2xl md:border md:border-gray-300 dark:md:border-gray-700 shadow-inner w-full md:w-auto mx-auto"
+      >
         {/* Loop through each tool to render a button with icon and tooltip */}
         {tools.map(({ tool, Icon, name }) => (
           <Tooltip key={tool}>
