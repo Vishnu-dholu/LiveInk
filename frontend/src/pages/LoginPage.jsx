@@ -32,6 +32,7 @@ const LoginPage = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMessage("");
 
     try {
       const response = await fetch("http://localhost:5000/api/auth/login", {
@@ -42,14 +43,21 @@ const LoginPage = () => {
         body: JSON.stringify({ email, password, rememberMe }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem("token", data.token);
-        navigate("/canvas");
+        if (rememberMe) {
+          localStorage.setItem("token", data.token);
+        } else {
+          sessionStorage.setItem("token", data.token);
+        }
+        navigate("/create-room");
       } else {
-        const data = await response.json();
-        setErrorMessage(data.message);
+        setErrorMessage(data.error || "Login failed");
       }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }

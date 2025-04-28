@@ -41,7 +41,7 @@ const SignupPage = () => {
     if (response.ok) {
       const data = await response.json();
       localStorage.setItem("token", data.token);
-      navigate("/canvas");
+      navigate("/create-room");
     } else {
       const data = await response.json();
       setErrorMessage(data.message);

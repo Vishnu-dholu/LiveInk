@@ -1,10 +1,11 @@
-import express, { json } from "express"
+import express from "express"
 import { createServer } from "http"    //  Create an HTTP server
 import { Server } from "socket.io"     // Import Socket.IO for WebSocket communication
 import cors from "cors"
 import dotenv from "dotenv"
 import authRoutes from "./routes/authRoutes.js"
 import oauthRoutes from "./routes/oauthRoutes.js"
+import roomRoutes from "./routes/roomRoutes.js"
 import pool from "./db.js"
 import initializePassport from "./config/passport.js"
 import session from "express-session"
@@ -39,9 +40,23 @@ app.use(passport.session())
 app.use("/api/auth", authRoutes)
 // app.use("/api/user", userRoutes)
 app.use("/auth", oauthRoutes)
+app.use("/api/rooms", roomRoutes)
 
 io.on("connection", (socket) => {
     console.log(`A user connected: ${socket.id}`)
+
+    // Listen for joining a room
+    socket.on('join-room', ({ roomId, userId }) => {
+        socket.join(roomId)
+        console.log(`User ${userId} joined room ${roomId}`)
+
+        // Broadcast to other users in the room
+        socket.to(roomId).emit('user-joined', { userId })
+    })
+
+    socket.on("leave-room", ({ roomId }) => {
+        socket.leave(roomId)
+    })
 
     socket.on("draw", (newLine) => {
         socket.broadcast.emit("draw", newLine)

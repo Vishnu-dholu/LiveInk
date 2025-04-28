@@ -6,7 +6,21 @@ const HomePage = () => {
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    navigate("/signup");
+    const token =
+      localStorage.getItem("token") || sessionStorage.getItem("token");
+
+    if (token) {
+      // User is already authenticated
+      navigate("/create-room");
+    } else {
+      // User is not authenticated
+      navigate("/signup");
+    }
+  };
+
+  const handleGuestAccess = () => {
+    // Navigate to a guest canvas
+    navigate("/canvas");
   };
   return (
     <div className="relative min-h-screen bg-gradient-to-tr from-purple-600 via-indigo-700 to-blue-600 text-white flex items-center justify-center px-6 overflow-hidden">
@@ -26,12 +40,21 @@ const HomePage = () => {
           Real-time collaborative drawing canvas to sketch, create, and ideate
           with your team.
         </p>
-        <Button
-          onClick={handleGetStarted}
-          className="text-lg px-6 py-3 bg-white text-indigo-700 font-semibold hover:bg-yellow-300 transition-all rounded-xl shadow-xl"
-        >
-          Get Started
-        </Button>
+        <div className="flex flex-col md:flex-row items-center justify-center gap-4">
+          <Button
+            onClick={handleGetStarted}
+            className="text-lg px-6 py-3 bg-white text-indigo-700 font-semibold hover:bg-yellow-300 transition-all rounded-xl shadow-xl"
+          >
+            Get Started
+          </Button>
+
+          <Button
+            onClick={handleGuestAccess}
+            className="text-lg px-6 py-3 bg-white text-green-600 font-semibold hover:bg-pink-300 transition-all rounded-xl shadow-xl"
+          >
+            Continue as Guest
+          </Button>
+        </div>
 
         {/* Feature Highlights */}
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
