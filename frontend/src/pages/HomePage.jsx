@@ -50,7 +50,7 @@ const HomePage = () => {
 
           <Button
             onClick={handleGuestAccess}
-            className="text-lg px-6 py-3 bg-white text-green-600 font-semibold hover:bg-pink-300 transition-all rounded-xl shadow-xl"
+            className="text-lg px-6 py-3 bg-white text-green-600 font-semibold hover:bg-red-300 transition-all rounded-xl shadow-xl"
           >
             Continue as Guest
           </Button>

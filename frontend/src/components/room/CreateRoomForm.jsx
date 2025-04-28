@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
 import { FiEye, FiEyeOff, FiHash, FiLock } from "react-icons/fi";
-import { MoonIcon, SunIcon } from "lucide-react"; // You can also use Heroicons or Tabler icons if needed.
+import { HomeIcon, MoonIcon, SunIcon, LogOutIcon } from "lucide-react";
 
 const CreateRoomForm = () => {
   const [roomName, setRoomName] = useState("");
@@ -39,17 +39,38 @@ const CreateRoomForm = () => {
     }
   };
 
+  const handleSignOut = () => {
+    localStorage.removeItem("token");
+    navigate("/login");
+  };
   return (
     <>
-      {/* Theme Toggle Button */}
-      <div className="absolute top-4 left-4">
+      <div className="absolute flex justify-between items-center top-4 left-4 right-4">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className="hover:text-yellow-400 dark:hover:text-yellow-300"
+          >
+            {isDarkMode ? <SunIcon size={20} /> : <MoonIcon size={20} />}
+          </Button>
+
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/")}
+            className="text-gray-700 dark:text-gray-200 hover:text-blue-500 transition-all"
+          >
+            <HomeIcon className="w-5 h-5" />
+          </Button>
+        </div>
+
         <Button
-          size="icon"
-          variant="ghost"
-          onClick={() => setIsDarkMode(!isDarkMode)}
-          className="hover:text-yellow-400 dark:hover:text-yellow-300"
+          variant="outline"
+          onClick={handleSignOut}
+          className="text-gray-700 dark:text-gray-200 border-gray-400 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center gap-2"
         >
-          {isDarkMode ? <SunIcon size={20} /> : <MoonIcon size={20} />}
+          <LogOutIcon size={18} />
+          Sign Out
         </Button>
       </div>
 
