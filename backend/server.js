@@ -10,6 +10,7 @@ import pool from "./db.js"
 import initializePassport from "./config/passport.js"
 import session from "express-session"
 import passport from "passport"
+import { createRoom, getRoomMembers, joinRoom } from "./services/roomService.js"
 
 dotenv.config()
 initializePassport()
@@ -45,13 +46,37 @@ app.use("/api/rooms", roomRoutes)
 io.on("connection", (socket) => {
     console.log(`A user connected: ${socket.id}`)
 
-    // Listen for joining a room
-    socket.on('join-room', ({ roomId, userId }) => {
-        socket.join(roomId)
-        console.log(`User ${userId} joined room ${roomId}`)
+    // Create room
+    socket.on("room:create", ({ userId, roomName, password }, callback) => {
+        try {
+            const roomId = createRoom(userId, roomName, password)
+            socket.join(roomId)
+            callback({ success: true, roomId })
+        } catch (err) {
+            callback({ success: false, message: err.message })
+        }
+    })
 
-        // Broadcast to other users in the room
-        socket.to(roomId).emit('user-joined', { userId })
+    // Listen for joining a room
+    socket.on('room:join', ({ roomId, userId, password }, callback) => {
+        try {
+            const users = joinRoom(roomId, userId, password)
+            socket.join(roomId)
+            socket.to(roomId).emit("user-joined", { userId })
+            callback({ success: true, users })
+        } catch (err) {
+            callback({ success: false, message: err.message })
+        }
+    })
+
+    // Get room members
+    socket.on("room:members", ({ roomId }, callback) => {
+        try {
+            const members = getRoomMembers(roomId)
+            callback({ success: true, members })
+        } catch (err) {
+            callback({ success: false, message: err.message })
+        }
     })
 
     socket.on("leave-room", ({ roomId }) => {

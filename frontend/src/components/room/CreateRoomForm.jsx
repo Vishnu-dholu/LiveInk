@@ -30,7 +30,8 @@ const CreateRoomForm = () => {
     setIsLoading(true);
     try {
       const res = await createRoom({ roomName, password });
-      navigate(`/room/${res.data.roomId}`);
+      const roomId = res.data.roomId;
+      navigate(`/room/${roomId}?password=${password}`);
     } catch (err) {
       console.error(err);
       alert(err.message || "Room creation failed");

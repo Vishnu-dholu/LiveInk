@@ -23,6 +23,9 @@ import { socket } from "@/lib/socket";
 import { useSocketListeners } from "@/hooks/useSocketListeners";
 import ColorPickerWrapper from "./ColorPickerWrapper";
 import SettingsPanel from "./SettingsPanel";
+import { useLocation, useParams } from "react-router-dom";
+import { Copy } from "lucide-react";
+import RoomUsersList from "./RoomUsersList";
 
 // Constants for large virtual canvas
 const virtualCanvasWidth = 10000;
@@ -49,7 +52,16 @@ const Canvas = () => {
   );
   const zoom = useSelector((state) => state.drawing.zoom, shallowEqual);
 
-  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false); // Manage color picker visibility
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false); // Manage color picker
+  const [roomIdCopied, setRoomIdCopied] = useState(false);
+  const [passwordCopied, setPasswordCopied] = useState(false);
+  const [roomUsers, setRoomUsers] = useState([]);
+
+  const { roomId } = useParams();
+  const location = useLocation();
+
+  const urlParams = new URLSearchParams(location.search);
+  const roomPassword = urlParams.get("password");
 
   // Register socket listeners (text, drawing, undo, etc.)
   useSocketListeners(socket);
@@ -91,6 +103,16 @@ const Canvas = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  useEffect(() => {
+    const handleRoomUsers = (users) => setRoomUsers(users);
+
+    socket.on("room_users", handleRoomUsers);
+
+    return () => {
+      socket.off("room_users", handleRoomUsers);
+    };
+  }, []);
+
   // Handler for tool selection from toolbox
   const handleSelectTool = useCallback(
     (tool) => {
@@ -103,6 +125,18 @@ const Canvas = () => {
     },
     [dispatch]
   );
+
+  const handleCopyRoomId = (text) => {
+    navigator.clipboard.writeText(text);
+    setRoomIdCopied(true);
+    setTimeout(() => setRoomIdCopied(false), 1500);
+  };
+
+  const handleCopyPassword = (text) => {
+    navigator.clipboard.writeText(text);
+    setPasswordCopied(true);
+    setTimeout(() => setPasswordCopied(false), 1500);
+  };
 
   // Undo action and emit to other users via socket
   const handleUndo = useCallback(() => {
@@ -143,6 +177,46 @@ const Canvas = () => {
 
   return (
     <div className="flex flex-col md:flex-row h-full w-full bg-gray-300 dark:bg-gray-900 overflow-hidden relative">
+      <div className="absolute top-4 left-1/10 -translate-x-1/2 bg-white/90 dark:bg-gray-800/90 text-gray-800 dark:text-white px-6 py-3 rounded-lg shadow-lg z-50 backdrop-blur-md border border-gray-300 dark:border-gray-700 w-fit flex flex-col gap-2">
+        {/* Room ID display */}
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-sm">Room ID:</span>
+          <span className="font-mono text-sm rounded px-2 py-0.5 dark:bg-gray-700 bg-gray-200">
+            {roomId}
+          </span>
+          <button
+            className="hover:text-blue-600 dark:hover:text-blue-400"
+            onClick={() => handleCopyRoomId(roomId)}
+            title="Copy Room ID"
+          >
+            <Copy size={16} />
+          </button>
+          {roomIdCopied && (
+            <span className="text-xs text-green-500 ml-2">Copied!</span>
+          )}
+        </div>
+
+        <div className="border-t border-gray-300 dark:border-gray-600 w-full" />
+
+        {/* Room Password */}
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-sm">Password:</span>
+          <span className="font-mono text-sm px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-700">
+            {roomPassword || "N/A"}
+          </span>
+          <button
+            className="hover:text-blue-600 dark:hover:text-blue-400"
+            onClick={() => handleCopyPassword(roomPassword)}
+            title="Copy Room ID"
+          >
+            <Copy size={16} />
+          </button>
+          {passwordCopied && (
+            <span className="text-xs text-green-500 ml-2">Copied!</span>
+          )}
+        </div>
+      </div>
+
       {/* Side toolbox (vertical on desktop, slide-in on mobile) */}
       <div className="hidden md:flex md:w-20 md:relative md:flex-col items-center justify-center left-6">
         <Toolbox onSelectTool={handleSelectTool} activeTool={selectedTool} />
@@ -176,14 +250,16 @@ const Canvas = () => {
         <div className="flex w-full max-w-fit flex-1 gap-2 overflow-hidden">
           {/* Canvas Area */}
           <div
-            className="flex-1 rounded-2xl shadow-lg border bg-[radial-gradient(#d4d4d4_1px,transparent_1px)] bg-[size:20px_20px] dark:bg-[radial-gradient(#4b5563_1px,transparent_1px)] overflow-hidden transition-transform duration-300 ease-in-out"
+            className="flex-1 rounded-2xl shadow-lg border bg-[radial-gradient(#d4d4d4_1px,transparent_1px)] bg-[size:20px_20px] dark:bg-[radial-gradient(#4b5563_1px,transparent_1px)] overflow-hidden transition-transform duration-500 ease-in-out"
             style={{ transformOrigin: "center center" }}
           >
             <DrawingStage {...drawingStageProps} />
           </div>
 
-          {/* Settings Panel */}
-          <SettingsPanel selectedTool={selectedTool} />
+          <div className="flex flex-col gap-2">
+            <SettingsPanel selectedTool={selectedTool} />
+            <RoomUsersList users={roomUsers} />
+          </div>
         </div>
       </div>
     </div>
