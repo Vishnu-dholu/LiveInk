@@ -25,6 +25,9 @@ const initialState = {
     fontFamily: "Arial",
     fontStyle: "normal",
     fontSize: 17,
+    roomId: null,
+    createdBy: "",
+    users: [],
 };
 
 const drawingSlice = createSlice({
@@ -302,7 +305,25 @@ const drawingSlice = createSlice({
 
         setStrokeWidth: (state, action) => {
             state.currentStrokeWidth = action.payload
-        }
+        },
+
+        setRoomInfo: (state, action) => {
+            const { roomId, createdBy, users } = action.payload
+            state.roomId = roomId
+            state.createdBy = createdBy
+            state.users = users
+        },
+        updateUsers: (state, action) => {
+            state.users = action.payload
+        },
+        clearRoom: (state) => {
+            state.roomId = null
+            state.createdBy = ""
+            state.users = []
+        },
+        updateCreatedBy: (state, action) => {
+            state.createdBy = action.payload || "";
+        },
     },
 });
 
@@ -376,6 +397,10 @@ export const {
     updateShapeFill,
     updateTextFill,
     setStrokeWidth,
+    setRoomInfo,
+    updateUsers,
+    clearRoom,
+    updateCreatedBy,
 } = drawingSlice.actions;
 
 export default drawingSlice.reducer;

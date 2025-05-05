@@ -17,6 +17,8 @@ import {
   updateCurrentShape,
   setStagePosition,
   setSelectedTool,
+  updateUsers,
+  updateCreatedBy,
 } from "@/store/drawingSlice";
 // Socket instance for real-time collaboration
 import { socket } from "@/lib/socket";
@@ -55,13 +57,33 @@ const Canvas = () => {
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false); // Manage color picker
   const [roomIdCopied, setRoomIdCopied] = useState(false);
   const [passwordCopied, setPasswordCopied] = useState(false);
-  const [roomUsers, setRoomUsers] = useState([]);
 
   const { roomId } = useParams();
   const location = useLocation();
 
   const urlParams = new URLSearchParams(location.search);
   const roomPassword = urlParams.get("password");
+
+  // useEffect(() => {
+  //   const handleMembers = ({ members, createdBy }) => {
+  //     const valid = (members || []).filter((u) => u?.userId && u?.username);
+  //     dispatch(updateUsers(valid));
+  //     dispatch(updateCreatedBy(createdBy));
+  //   };
+
+  //   socket.on("room:members", handleMembers);
+
+  //   socket.emit("room:members", { roomId }, (response) => {
+  //     if (response.success) {
+  //       handleMembers({
+  //         members: response.members,
+  //         createdBy: response.createdBy,
+  //       });
+  //     }
+  //   });
+
+  //   return () => socket.off("room:members", handleMembers``);
+  // }, [roomId, dispatch]);
 
   // Register socket listeners (text, drawing, undo, etc.)
   useSocketListeners(socket);
@@ -101,16 +123,6 @@ const Canvas = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
-  useEffect(() => {
-    const handleRoomUsers = (users) => setRoomUsers(users);
-
-    socket.on("room_users", handleRoomUsers);
-
-    return () => {
-      socket.off("room_users", handleRoomUsers);
-    };
   }, []);
 
   // Handler for tool selection from toolbox
@@ -258,7 +270,7 @@ const Canvas = () => {
 
           <div className="flex flex-col gap-2">
             <SettingsPanel selectedTool={selectedTool} />
-            <RoomUsersList users={roomUsers} />
+            <RoomUsersList />
           </div>
         </div>
       </div>

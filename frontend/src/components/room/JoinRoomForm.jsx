@@ -1,9 +1,9 @@
-import { joinRoom } from "@/api/room";
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Button } from "../ui/button";
 import { FiEye, FiEyeOff, FiHash, FiLock } from "react-icons/fi";
 import { HomeIcon, LogOutIcon, MoonIcon, SunIcon } from "lucide-react";
+import { socket } from "@/lib/socket";
 
 const JoinRoomForm = () => {
   const [roomId, setRoomId] = useState("");
@@ -13,6 +13,8 @@ const JoinRoomForm = () => {
   const [isDarkMode, setIsDarkMode] = useState(
     localStorage.getItem("theme") === "dark"
   );
+  const { roomId: roomIdFromParams } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,19 +27,46 @@ const JoinRoomForm = () => {
     }
   }, [isDarkMode]);
 
+  useEffect(() => {
+    const pwd = searchParams.get("password");
+    if (roomIdFromParams) setRoomId(roomIdFromParams);
+    if (pwd) setPassword(pwd);
+  }, [roomIdFromParams, searchParams]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
+    if (!roomId) return alert("Please enter a Room ID.");
+
+    const storedUser =
+      localStorage.getItem("user") || sessionStorage.getItem("user");
+
+    if (!storedUser) return navigate("/login");
+
+    let user;
     try {
-      const res = await joinRoom({ roomId, password });
-      console.log(`${res.data.roomId}`);
-      navigate(`/room/${res.data.roomId}`);
-    } catch (err) {
-      console.error(err);
-      alert(err.message || "Failed to join room");
-    } finally {
-      setIsLoading(false);
+      user = JSON.parse(storedUser);
+    } catch {
+      return navigate("/login");
     }
+
+    const { username, userId } = user;
+    if (!username || !userId) return navigate("/login");
+
+    setIsLoading(true);
+
+    socket.emit(
+      "room:join",
+      { roomId, userId, username, password },
+      (response) => {
+        setIsLoading(false);
+
+        if (response.success) {
+          navigate(`/room/${roomId}?password=${password}`);
+        } else {
+          alert(response.message || "Failed to join room.");
+        }
+      }
+    );
   };
 
   const handleSignOut = () => {

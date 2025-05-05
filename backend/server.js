@@ -10,12 +10,13 @@ import pool from "./db.js"
 import initializePassport from "./config/passport.js"
 import session from "express-session"
 import passport from "passport"
-import { createRoom, getRoomMembers, joinRoom } from "./services/roomService.js"
+import { createRoom, getRoomMembers, joinRoom, getRooms } from "./services/roomService.js"
 
 dotenv.config()
 initializePassport()
 
 const app = express()   //  Initialize Express.js app
+const rooms = getRooms()
 
 app.use(session({
     secret: process.env.SESSION_SECRET || "some_secret",
@@ -47,9 +48,9 @@ io.on("connection", (socket) => {
     console.log(`A user connected: ${socket.id}`)
 
     // Create room
-    socket.on("room:create", ({ userId, roomName, password }, callback) => {
+    socket.on("room:create", ({ userId, roomName, password, username }, callback) => {
         try {
-            const roomId = createRoom(userId, roomName, password)
+            const roomId = createRoom(userId, roomName, password, username)
             socket.join(roomId)
             callback({ success: true, roomId })
         } catch (err) {
@@ -58,12 +59,25 @@ io.on("connection", (socket) => {
     })
 
     // Listen for joining a room
-    socket.on('room:join', ({ roomId, userId, password }, callback) => {
+    socket.on('room:join', ({ roomId, userId, username, password }, callback) => {
         try {
-            const users = joinRoom(roomId, userId, password)
+            const users = joinRoom(roomId, userId, password, username)
             socket.join(roomId)
-            socket.to(roomId).emit("user-joined", { userId })
-            callback({ success: true, users })
+            socket.userId = userId
+            socket.roomId = roomId
+
+            const room = rooms[roomId]
+            // Notify existing users about the new user
+            socket.to(roomId).emit("user-joined", { userId, username })
+
+            // Send updated user list to everyone in the room
+            const members = room.users.map((u) => ({
+                userId: u.userId,
+                username: u.username || "",
+            }))
+            io.to(roomId).emit("room:members", { members, createdBy: room.createdBy })
+
+            callback({ success: true, users: members, createdBy: room.createdBy })
         } catch (err) {
             callback({ success: false, message: err.message })
         }
@@ -79,8 +93,18 @@ io.on("connection", (socket) => {
         }
     })
 
-    socket.on("leave-room", ({ roomId }) => {
+    socket.on("leave-room", ({ roomId, userId }) => {
         socket.leave(roomId)
+        const room = rooms[roomId]
+
+        if (room) {
+            room.users = room.users.filter(u => u.userId !== userId)
+            io.to(roomId).emit("room:member", { members: room.users, createdBy: room.createdBy });
+
+            if (room.users.length === 0) {
+                delete rooms[roomId]
+            }
+        }
     })
 
     socket.on("draw", (newLine) => {
@@ -157,6 +181,19 @@ io.on("connection", (socket) => {
 
     socket.on("disconnect", () => {
         console.log(`User disconnected: ${socket.id}`);
+        const { roomId, userId } = socket
+        if (!roomId || !userId) return
+
+        const room = rooms[roomId]
+        if (room) {
+            room.users = room.users.filter(u => u.userId !== userId)
+
+            io.to(roomId).emit("room:member", { members: room.users })
+
+            if (room.users.length === 0) {
+                delete rooms[roomId]
+            }
+        }
     });
 });
 

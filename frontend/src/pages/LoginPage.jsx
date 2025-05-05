@@ -46,9 +46,17 @@ const LoginPage = () => {
       const data = await response.json();
 
       if (response.ok) {
+        const userToStore = {
+          userId: data.user.id,
+          username: data.user.username,
+          email: data.user.email,
+        };
+
         if (rememberMe) {
+          localStorage.setItem("user", JSON.stringify(userToStore));
           localStorage.setItem("token", data.token);
         } else {
+          sessionStorage.setItem("user", JSON.stringify(userToStore));
           sessionStorage.setItem("token", data.token);
         }
         navigate("/create-room");

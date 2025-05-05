@@ -33,7 +33,23 @@ const App = () => {
         }
       />
       <Route
+        path="/join-room/:roomId"
+        element={
+          <ProtectedRoute>
+            <JoinRoomPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/room/:roomId"
+        element={
+          <ProtectedRoute>
+            <RoomPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/room/:roomId/draw"
         element={
           <ProtectedRoute>
             <CanvasPage />

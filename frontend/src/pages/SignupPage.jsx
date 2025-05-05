@@ -29,22 +29,36 @@ const SignupPage = () => {
 
   const handleSignup = async (e) => {
     e.preventDefault();
+    setErrorMessage("");
 
-    const response = await fetch("http://localhost:5000/api/auth/register", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ username, email, password }),
-    });
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, email, password }),
+      });
 
-    if (response.ok) {
       const data = await response.json();
-      localStorage.setItem("token", data.token);
-      navigate("/create-room");
-    } else {
-      const data = await response.json();
-      setErrorMessage(data.message);
+      console.log("Registered user:", data.user);
+
+      if (response.ok) {
+        const userToStore = {
+          userId: data.user.id,
+          username: data.user.username,
+          email: data.user.email,
+        };
+
+        localStorage.setItem("user", JSON.stringify(userToStore));
+        localStorage.setItem("token", data.token);
+        navigate("/create-room");
+      } else {
+        setErrorMessage(data.error || "Signup failed");
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Something went wrong. Please try again.");
     }
   };
   return (

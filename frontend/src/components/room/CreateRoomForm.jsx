@@ -1,9 +1,12 @@
-import { createRoom } from "@/api/room";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../ui/button";
 import { FiEye, FiEyeOff, FiHash, FiLock } from "react-icons/fi";
 import { HomeIcon, MoonIcon, SunIcon, LogOutIcon } from "lucide-react";
+import { socket } from "@/lib/socket";
+import { getStoredUser } from "@/lib/getStoredUser";
+import { useDispatch } from "react-redux";
+import { updateCreatedBy } from "@/store/drawingSlice";
 
 const CreateRoomForm = () => {
   const [roomName, setRoomName] = useState("");
@@ -14,6 +17,7 @@ const CreateRoomForm = () => {
     localStorage.getItem("theme") === "dark"
   );
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   useEffect(() => {
     if (isDarkMode) {
@@ -28,13 +32,30 @@ const CreateRoomForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+
     try {
-      const res = await createRoom({ roomName, password });
-      const roomId = res.data.roomId;
-      navigate(`/room/${roomId}?password=${password}`);
+      const user = getStoredUser();
+
+      const { userId, username } = user;
+
+      socket.emit(
+        "room:create",
+        { userId, roomName, password, username },
+        (response) => {
+          if (response.success) {
+            const roomId = response.roomId;
+
+            dispatch(updateCreatedBy(username));
+
+            navigate(`/room/${roomId}?password=${password}`);
+          } else {
+            alert(response.message || "Room creation failed");
+          }
+        }
+      );
     } catch (err) {
       console.error(err);
-      alert(err.message || "Room creation failed");
+      alert("Room creation failed");
     } finally {
       setIsLoading(false);
     }
@@ -42,6 +63,9 @@ const CreateRoomForm = () => {
 
   const handleSignOut = () => {
     localStorage.removeItem("token");
+    sessionStorage.removeItem("token");
+    localStorage.removeItem("user");
+    sessionStorage.removeItem("user");
     navigate("/login");
   };
   return (
