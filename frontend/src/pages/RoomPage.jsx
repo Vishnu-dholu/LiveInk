@@ -1,3 +1,4 @@
+import InviteLink from "@/components/room/InviteLink";
 import { socket } from "@/lib/socket";
 import {
   setRoomInfo,
@@ -17,9 +18,7 @@ const RoomPage = () => {
 
   const [joined, setJoined] = useState(false);
   const [username, setUsername] = useState("");
-  const [inviteLink, setInviteLink] = useState("");
   const [createdBy, setCreatedBy] = useState("");
-  const [copySuccess, setCopySuccess] = useState(false);
 
   const password =
     new URLSearchParams(window.location.search).get("password") || "";
@@ -52,9 +51,6 @@ const RoomPage = () => {
       (response) => {
         if (response.success) {
           setJoined(true);
-          setInviteLink(
-            `${window.location.origin}/join-room/${roomId}?password=${password}`
-          );
           setCreatedBy(response.createdBy || "");
 
           const validUser = (response.users || []).filter(
@@ -76,7 +72,6 @@ const RoomPage = () => {
 
     // Listen for member updates
     const onRoomMembers = ({ members, createdBy }) => {
-      console.log("🔁 Received room:members", members);
       const validUsers = (members || []).filter(
         (u) => u?.userId && u?.username
       );
@@ -92,18 +87,6 @@ const RoomPage = () => {
       socket.off("room:members", onRoomMembers);
     };
   }, []);
-
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(inviteLink);
-      setCopySuccess(true);
-      setTimeout(() => {
-        setCopySuccess(false);
-      }, 2000);
-    } catch (err) {
-      alert("Failed to copy the invite link.");
-    }
-  };
 
   const handleStartDrawing = () => navigate(`/room/${roomId}/draw`);
 
@@ -128,24 +111,7 @@ const RoomPage = () => {
         </p>
       </div>
 
-      <div className="mb-4">
-        <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">
-          Room ID:
-        </label>
-        <div className="flex items-center gap-2">
-          <span className="bg-gray-200 dark:bg-gray-700 px-3 py-1 rounded text-sm font-mono">
-            {roomId}
-          </span>
-          <button
-            onClick={handleCopyLink}
-            className={`${
-              copySuccess ? "bg-green-500" : "bg-blue-500 hover:bg-blue-600"
-            } text-white text-sm px-3 py-1 rounded transition`}
-          >
-            {copySuccess ? "Link Copied!" : "Copy Invite Link"}
-          </button>
-        </div>
-      </div>
+      <InviteLink roomId={roomId} password={password} />
 
       {createdBy && (
         <div className="mb-6 text-sm text-gray-500 dark:text-gray-400">

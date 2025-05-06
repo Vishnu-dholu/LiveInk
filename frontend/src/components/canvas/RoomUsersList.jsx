@@ -1,19 +1,11 @@
-import { useEffect } from "react";
 import { useSelector } from "react-redux";
 
 const RoomUsersList = () => {
   const users = useSelector((state) => state.drawing.users);
   const createdBy = useSelector((state) => state.drawing.createdBy);
 
-  useEffect(() => {
-    if (users.length || createdBy) {
-      console.log("Room Users:", users);
-      console.log("Created By:", createdBy);
-    }
-  }, [users, createdBy]);
-
   return (
-    <div className="sm:w-56 w-auto rounded-2xl bg-white dark:bg-gray-800 shadow-lg p-4 mt-2 flex flex-col gap-2 border border-gray-200 dark:border-gray-700 overflow-y-auto max-h-64">
+    <div className="sm:w-56 w-auto rounded-2xl bg-white dark:bg-gray-800 shadow-lg p-4 mt-2 flex flex-col gap-2 border border-gray-200 dark:border-gray-700 overflow-y-auto max-h-64 overflow-hidden">
       <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
         Room Users
       </h2>
@@ -26,10 +18,17 @@ const RoomUsersList = () => {
           {users.map((user) => (
             <li
               key={user.userId || user.username}
-              className="text-sm px-3 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100"
+              className="flex items-center gap-2 px-3 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 text-sm hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
-              {user.username || "Unnamed user"}
-              {user.username === createdBy && " (Creator)"}
+              <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                {user.username?.charAt(0).toUpperCase() || "?"}
+              </div>
+              <span>
+                {user.username || "Unnamed user"}
+                {user.username === createdBy && (
+                  <span className="text-xs text-green-400 ml-1">(Creator)</span>
+                )}
+              </span>
             </li>
           ))}
         </ul>

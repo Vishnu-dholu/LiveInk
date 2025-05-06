@@ -17,17 +17,15 @@ import {
   updateCurrentShape,
   setStagePosition,
   setSelectedTool,
-  updateUsers,
-  updateCreatedBy,
 } from "@/store/drawingSlice";
 // Socket instance for real-time collaboration
 import { socket } from "@/lib/socket";
 import { useSocketListeners } from "@/hooks/useSocketListeners";
 import ColorPickerWrapper from "./ColorPickerWrapper";
-import SettingsPanel from "./SettingsPanel";
 import { useLocation, useParams } from "react-router-dom";
-import { Copy } from "lucide-react";
-import RoomUsersList from "./RoomUsersList";
+import { Copy, MoveLeft, MoveRight } from "lucide-react";
+import RightPanelTabs from "./RightPanelTabs";
+import InviteLink from "../room/InviteLink";
 
 // Constants for large virtual canvas
 const virtualCanvasWidth = 10000;
@@ -55,8 +53,7 @@ const Canvas = () => {
   const zoom = useSelector((state) => state.drawing.zoom, shallowEqual);
 
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false); // Manage color picker
-  const [roomIdCopied, setRoomIdCopied] = useState(false);
-  const [passwordCopied, setPasswordCopied] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const { roomId } = useParams();
   const location = useLocation();
@@ -64,28 +61,6 @@ const Canvas = () => {
   const urlParams = new URLSearchParams(location.search);
   const roomPassword = urlParams.get("password");
 
-  // useEffect(() => {
-  //   const handleMembers = ({ members, createdBy }) => {
-  //     const valid = (members || []).filter((u) => u?.userId && u?.username);
-  //     dispatch(updateUsers(valid));
-  //     dispatch(updateCreatedBy(createdBy));
-  //   };
-
-  //   socket.on("room:members", handleMembers);
-
-  //   socket.emit("room:members", { roomId }, (response) => {
-  //     if (response.success) {
-  //       handleMembers({
-  //         members: response.members,
-  //         createdBy: response.createdBy,
-  //       });
-  //     }
-  //   });
-
-  //   return () => socket.off("room:members", handleMembers``);
-  // }, [roomId, dispatch]);
-
-  // Register socket listeners (text, drawing, undo, etc.)
   useSocketListeners(socket);
 
   const centerStage = useCallback(() => {
@@ -190,43 +165,9 @@ const Canvas = () => {
   return (
     <div className="flex flex-col md:flex-row h-full w-full bg-gray-300 dark:bg-gray-900 overflow-hidden relative">
       <div className="absolute top-4 left-1/10 -translate-x-1/2 bg-white/90 dark:bg-gray-800/90 text-gray-800 dark:text-white px-6 py-3 rounded-lg shadow-lg z-50 backdrop-blur-md border border-gray-300 dark:border-gray-700 w-fit flex flex-col gap-2">
-        {/* Room ID display */}
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-sm">Room ID:</span>
-          <span className="font-mono text-sm rounded px-2 py-0.5 dark:bg-gray-700 bg-gray-200">
-            {roomId}
-          </span>
-          <button
-            className="hover:text-blue-600 dark:hover:text-blue-400"
-            onClick={() => handleCopyRoomId(roomId)}
-            title="Copy Room ID"
-          >
-            <Copy size={16} />
-          </button>
-          {roomIdCopied && (
-            <span className="text-xs text-green-500 ml-2">Copied!</span>
-          )}
-        </div>
+        <InviteLink roomId={roomId} password={roomPassword} />
 
         <div className="border-t border-gray-300 dark:border-gray-600 w-full" />
-
-        {/* Room Password */}
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-sm">Password:</span>
-          <span className="font-mono text-sm px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-700">
-            {roomPassword || "N/A"}
-          </span>
-          <button
-            className="hover:text-blue-600 dark:hover:text-blue-400"
-            onClick={() => handleCopyPassword(roomPassword)}
-            title="Copy Room ID"
-          >
-            <Copy size={16} />
-          </button>
-          {passwordCopied && (
-            <span className="text-xs text-green-500 ml-2">Copied!</span>
-          )}
-        </div>
       </div>
 
       {/* Side toolbox (vertical on desktop, slide-in on mobile) */}
@@ -268,9 +209,24 @@ const Canvas = () => {
             <DrawingStage {...drawingStageProps} />
           </div>
 
-          <div className="flex flex-col gap-2">
-            <SettingsPanel selectedTool={selectedTool} />
-            <RoomUsersList />
+          <div
+            className={`transition-all duration-300 ${
+              isCollapsed ? "w-0" : "w-[300px]"
+            } h-full relative`}
+          >
+            <button
+              onClick={() => setIsCollapsed((prev) => !prev)}
+              className="absolute top-1/2 left-[-32px] z-10 bg-white dark:bg-gray-800 p-1 rounded-lg shadow border-2"
+              title={isCollapsed ? "Open Panel" : "Close Panel"}
+            >
+              {isCollapsed ? <MoveLeft /> : <MoveRight />}
+            </button>
+
+            {!isCollapsed && (
+              <div className="flex flex-col h-full rounded-2xl bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700">
+                <RightPanelTabs selectedTool={selectedTool} />
+              </div>
+            )}
           </div>
         </div>
       </div>
