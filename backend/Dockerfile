@@ -1,5 +1,5 @@
 # Use an official Node.js image as the base image
-FROM node:18-alpine
+FROM node:24-alpine
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -14,7 +14,7 @@ RUN npm install
 COPY . .
 
 # Expose port 5000 for API and WebSocket communication
-EXPOSE 5000
+EXPOSE 5050
 
 # Start the backend server
 CMD ["node", "server.js"]
