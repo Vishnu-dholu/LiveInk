@@ -17,13 +17,16 @@ import {
   updateCurrentShape,
   setStagePosition,
   setSelectedTool,
+  setRoomInfo,
+  updateUsers,
+  updateCreatedBy,
 } from "@/store/drawingSlice";
 // Socket instance for real-time collaboration
 import { socket } from "@/lib/socket";
 import { useSocketListeners } from "@/hooks/useSocketListeners";
 import ColorPickerWrapper from "./ColorPickerWrapper";
-import { useLocation, useParams } from "react-router-dom";
-import { Copy, MoveLeft, MoveRight } from "lucide-react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { MoveLeft, MoveRight } from "lucide-react";
 import RightPanelTabs from "./RightPanelTabs";
 import InviteLink from "../room/InviteLink";
 
@@ -54,14 +57,62 @@ const Canvas = () => {
 
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false); // Manage color picker
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [chatHistory, setChatHistory] = useState([]);
 
+  const navigate = useNavigate();
   const { roomId } = useParams();
   const location = useLocation();
 
-  const urlParams = new URLSearchParams(location.search);
-  const roomPassword = urlParams.get("password");
+  const roomPassword =
+    new URLSearchParams(location.search).get("password") || "";
 
   useSocketListeners(socket);
+
+  const stored = localStorage.getItem("user") || sessionStorage.getItem("user");
+  const me = stored ? JSON.parse(stored) : {};
+
+  // 1) on-mount & on socket "connect" -> re-join the room
+  useEffect(() => {
+    if (!roomId || !me.userId) {
+      navigate("/join-room");
+      return;
+    }
+
+    socket.emit(
+      "room:join",
+      {
+        roomId,
+        userId: me.userId,
+        username: me.username,
+        password: roomPassword,
+      },
+      (resp) => {
+        if (!resp.success) {
+          console.error("join failed", resp.message);
+          navigate("/join-room");
+          return;
+        }
+        // this is the big one:
+        setChatHistory(resp.history || []);
+        // also update users / createdBy if you like
+        dispatch(
+          setRoomInfo({ roomId, createdBy: resp.createdBy, users: resp.users })
+        );
+      }
+    );
+  }, [roomId, me.userId, me.username, roomPassword]);
+
+  // 2) subscribe to live member updates
+  useEffect(() => {
+    const onMembers = ({ members, createdBy }) => {
+      dispatch(updateUsers(members));
+      dispatch(updateCreatedBy(createdBy));
+    };
+    socket.on("room:members", onMembers);
+    return () => {
+      socket.off("room:members", onMembers);
+    };
+  }, [dispatch]);
 
   const centerStage = useCallback(() => {
     const screenWidth = window.innerWidth;
@@ -112,18 +163,6 @@ const Canvas = () => {
     },
     [dispatch]
   );
-
-  const handleCopyRoomId = (text) => {
-    navigator.clipboard.writeText(text);
-    setRoomIdCopied(true);
-    setTimeout(() => setRoomIdCopied(false), 1500);
-  };
-
-  const handleCopyPassword = (text) => {
-    navigator.clipboard.writeText(text);
-    setPasswordCopied(true);
-    setTimeout(() => setPasswordCopied(false), 1500);
-  };
 
   // Undo action and emit to other users via socket
   const handleUndo = useCallback(() => {
@@ -216,7 +255,7 @@ const Canvas = () => {
           >
             <button
               onClick={() => setIsCollapsed((prev) => !prev)}
-              className="absolute top-1/2 left-[-32px] z-10 bg-white dark:bg-gray-800 p-1 rounded-lg shadow border-2"
+              className="absolute top-1/2 left-[-40px] z-10 bg-white dark:bg-gray-800 p-1 rounded-lg shadow border-2"
               title={isCollapsed ? "Open Panel" : "Close Panel"}
             >
               {isCollapsed ? <MoveLeft /> : <MoveRight />}
@@ -224,7 +263,10 @@ const Canvas = () => {
 
             {!isCollapsed && (
               <div className="flex flex-col h-full rounded-2xl bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700">
-                <RightPanelTabs selectedTool={selectedTool} />
+                <RightPanelTabs
+                  selectedTool={selectedTool}
+                  initialHistory={chatHistory}
+                />
               </div>
             )}
           </div>

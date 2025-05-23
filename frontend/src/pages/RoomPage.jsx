@@ -19,6 +19,7 @@ const RoomPage = () => {
   const [joined, setJoined] = useState(false);
   const [username, setUsername] = useState("");
   const [createdBy, setCreatedBy] = useState("");
+  const [chatHistory, setChatHistory] = useState([]);
 
   const password =
     new URLSearchParams(window.location.search).get("password") || "";
@@ -63,6 +64,8 @@ const RoomPage = () => {
               users: validUser,
             })
           );
+
+          setChatHistory(response.history || []);
         } else {
           alert(response.message);
           navigate("/join-room");

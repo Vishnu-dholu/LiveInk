@@ -28,6 +28,7 @@ const initialState = {
     roomId: null,
     createdBy: "",
     users: [],
+    // chatHistory: [],
 };
 
 const drawingSlice = createSlice({

@@ -1,20 +1,50 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import SettingsPanel from "./SettingsPanel";
 import RoomUsersList from "./RoomUsersList";
 import ChatPanel from "./ChatPanel";
 import { MessageCircle, Sliders, Users } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { socket } from "@/lib/socket";
 
-const RightPanelTabs = ({ selectedTool }) => {
-  const [activeTab, setActiveTab] = useState("settings");
+const RightPanelTabs = ({ selectedTool, initialHistory = [] }) => {
+  const [activeTab, setActiveTab] = useState("chat");
+  const [messages, setMessages] = useState(initialHistory);
+  const { roomId } = useParams();
+
+  useEffect(() => {
+    setMessages(initialHistory);
+  }, [initialHistory]);
+
+  useEffect(() => {
+    if (!roomId) return;
+
+    const handleIncoming = (msg) => setMessages((prev) => [...prev, msg]);
+
+    socket.on("room:message", handleIncoming);
+    return () => void socket.off("room:message", handleIncoming);
+  }, [roomId]);
+
+  const handleSendMessage = (text) => {
+    const me = JSON.parse(localStorage.getItem("user"));
+    const newMessage = {
+      username: me.username,
+      text,
+      timestamp: Date.now(),
+    };
+
+    socket.emit("room:message", { roomId, message: newMessage });
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case "settings":
+      case "property":
         return <SettingsPanel selectedTool={selectedTool} />;
       case "users":
         return <RoomUsersList />;
       case "chat":
-        return <ChatPanel />;
+        return (
+          <ChatPanel messages={messages} onSendMessage={handleSendMessage} />
+        );
       default:
         return null;
     }
@@ -27,7 +57,7 @@ const RightPanelTabs = ({ selectedTool }) => {
       label: "Property",
     },
     {
-      id: "user",
+      id: "users",
       icon: <Users size={18} />,
       label: "User",
     },

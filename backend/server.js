@@ -18,6 +18,8 @@ initializePassport()
 const app = express()   //  Initialize Express.js app
 const rooms = getRooms()
 
+Object.values(rooms).forEach(r => (r.messages = []))
+
 app.use(session({
     secret: process.env.SESSION_SECRET || "some_secret",
     resave: false,
@@ -52,6 +54,9 @@ io.on("connection", (socket) => {
         try {
             const roomId = createRoom(userId, roomName, password, username)
             socket.join(roomId)
+
+            rooms[roomId] = rooms[roomId] || {}
+            rooms[roomId].messages = []
             callback({ success: true, roomId })
         } catch (err) {
             callback({ success: false, message: err.message })
@@ -63,21 +68,26 @@ io.on("connection", (socket) => {
         try {
             const users = joinRoom(roomId, userId, password, username)
             socket.join(roomId)
-            socket.userId = userId
+            // socket.userId = userId
             socket.roomId = roomId
 
+            rooms[roomId] = rooms[roomId] || {}
+            rooms[roomId].messages = rooms[roomId].messages || []
+
+
             const room = rooms[roomId]
+            // Send updated user list to everyone in the room
+            const members = room.users.map(u => ({
+                userId: u.userId,
+                username: u.username,
+            }))
+
             // Notify existing users about the new user
             socket.to(roomId).emit("user-joined", { userId, username })
 
-            // Send updated user list to everyone in the room
-            const members = room.users.map((u) => ({
-                userId: u.userId,
-                username: u.username || "",
-            }))
             io.to(roomId).emit("room:members", { members, createdBy: room.createdBy })
 
-            callback({ success: true, users: members, createdBy: room.createdBy })
+            callback({ success: true, users: members, createdBy: room.createdBy, history: room.messages })
         } catch (err) {
             callback({ success: false, message: err.message })
         }
@@ -106,6 +116,17 @@ io.on("connection", (socket) => {
             }
         }
     })
+
+    socket.on("room:message", ({ roomId, message }) => {
+        // make absolutely sure the room and its array exist
+        if (!rooms[roomId]) {
+            rooms[roomId] = { users: [], messages: [] }
+        }
+        rooms[roomId].messages = rooms[roomId].messages || []
+        rooms[roomId].messages.push(message);
+        // broadcast to everyone, including sender
+        io.to(roomId).emit("room:message", message);
+    });
 
     socket.on("draw", (newLine) => {
         socket.broadcast.emit("draw", newLine)

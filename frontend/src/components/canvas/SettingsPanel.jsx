@@ -12,22 +12,32 @@ const SettingsPanel = ({ selectedTool }) => {
     selectedTool === "text" || (selectedTool === "select" && selectedTextId);
   const hasSettings = showTextControls || showStrokeControls;
   return (
-    <div className="sm:w-56 w-auto h-full rounded-2xl bg-white dark:bg-gray-800 shadow-lg p-4 flex flex-col gap-4 border border-gray-200 dark:border-gray-700 overflow-y-auto">
+    <div className="sm:w-64 w-auto h-full rounded-2xl bg-white dark:bg-gray-900 shadow-md p-5 flex flex-col gap-6 border border-gray-200 dark:border-gray-700 overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out">
       {hasSettings ? (
         <>
           {showTextControls && (
-            <>
+            <div children="space-y-4">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 border-b pb-1 border-gray-300 dark:border-gray-700">
+                Text Settings
+              </h3>
               <FontSizeControl />
               <FontStyleSelector />
-            </>
+            </div>
           )}
-          {showStrokeControls && <StrokeWidthPicker />}
+          {showStrokeControls && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 border-b pb-1 border-gray-300 dark:border-gray-700">
+                Stroke Settings
+              </h3>
+              <StrokeWidthPicker />
+            </div>
+          )}
         </>
       ) : (
         // Friendly placeholder when no settings are available for selected tool
-        <div className="flex flex-col items-center justify-center mt-8 text-gray-500 dark:text-gray-400">
-          <span className="text-2xl">🛠️</span>
-          <p className="text-sm mt-2 text-center">
+        <div className="flex flex-col items-center justify-center mt-16 text-gray-500 dark:text-gray-400 text-center space-y-2">
+          <span className="text-3xl">🛠️</span>
+          <p className="text-sm font-medium">
             Select a tool to adjust its settings
           </p>
         </div>
