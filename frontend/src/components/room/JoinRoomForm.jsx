@@ -54,6 +54,10 @@ const JoinRoomForm = () => {
 
     setIsLoading(true);
 
+    if (!socket.connected) {
+      socket.connect();
+    }
+
     socket.emit(
       "room:join",
       { roomId, userId, username, password },

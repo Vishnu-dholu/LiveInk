@@ -19,10 +19,17 @@ import { useTextDeselect } from "@/hooks/useTextDeselect";
  * - onRedo: function to handle redo operation
  * - onClear: function to handle clearing the canvas
  */
-const Toolbar = ({ onUndo, onRedo, onClear, stageRef }) => {
+const Toolbar = ({
+  onUndo,
+  onRedo,
+  onClear,
+  onDeleteSelected,
+  hasSelection,
+  stageRef,
+}) => {
   //  Manage dark mode toggle using localStorage for persistence
   const [isDarkMode, setIsDarkMode] = useState(
-    localStorage.getItem("theme") === "dark"
+    localStorage.getItem("theme") === "dark",
   );
   const dispatch = useDispatch();
 
@@ -84,7 +91,7 @@ const Toolbar = ({ onUndo, onRedo, onClear, stageRef }) => {
         md:mb-0
       >
         <FaTrash className="text-lg" />
-        Clear
+        Clear All
       </Button>
 
       {/* Dark Mode Toggle */}

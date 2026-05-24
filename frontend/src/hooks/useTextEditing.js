@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
-    updateTextContent,
-    updateCurrentText,
-    commitCurrentText,
-    updateTextPosition,
+  updateTextContent,
+  addText,
+  updateTextPosition,
 } from "@/store/drawingSlice";
 import { v4 as uuidv4 } from "uuid";
 
@@ -13,172 +12,254 @@ import { v4 as uuidv4 } from "uuid";
  * inside the collaborative canvas environment using Konva and Redux
  */
 const useTextEditing = (stageRef, socket) => {
-    const dispatch = useDispatch();
+  const dispatch = useDispatch();
 
-    // Selects the text array and currently edited text from global Redux state
-    const texts = useSelector((state) => state.drawing.texts);
-    const currentText = useSelector((state) => state.drawing.currentText);
-    const currentFillColor = useSelector((state) => state.drawing.currentFillColor);
+  // Selects the text array from global Redux state
+  const texts = useSelector((state) => state.drawing.texts);
+  const currentFillColor = useSelector(
+    (state) => state.drawing.currentFillColor,
+  );
 
-    // Local UI states for text editing
-    const [isEditingText, setIsEditingText] = useState(false);      //  Flag to show if user is editing
-    const [editTextProps, setEditTextProps] = useState(null);       //  Stores properties of text being edited
+  // Local UI states for text editing
+  const [isEditingText, setIsEditingText] = useState(false);
+  const [editTextProps, setEditTextProps] = useState(null);
 
-    /**
-     * Called when the canvas is clicked using the "Text" tool.
-     * Adds a new text element if the click isn't over existing text.
-     * @param {Object} pointerPos - Current mouse pointer position.
-     * @param {Object} selectedTool - Active drawing tool.
-     */
-    const handleAddText = (pointerPos, selectedTool) => {
-        // Check if the click overlaps with any existing text
-        const clickedOnText = texts.some((t) => {
-            const textWidth = t.text.length * (t.fontSize * 0.6);
-            const textHeight = t.fontSize;
-            return (
-                pointerPos.x >= t.x &&
-                pointerPos.x <= t.x + textWidth &&
-                pointerPos.y >= t.y &&
-                pointerPos.y <= t.y + textHeight
-            );
-        });
+  /**
+   * Opens a native textarea overlay positioned over a text element
+   * for inline editing. Works for both new and existing text.
+   */
+  const openTextEditor = useCallback(
+    (textObj, isNewText = false) => {
+      setIsEditingText(true);
+      setEditTextProps(textObj);
 
-        // If tool is "text", click is not over existing text, and no active text
-        if (
-            selectedTool === "text" &&
-            !clickedOnText &&
-            (!currentText || !currentText.text)
-        ) {
-            // Create a new text object
-            const newText = {
-                id: uuidv4(),
-                x: pointerPos.x,
-                y: pointerPos.y,
-                text: "Type here...",
-                fontSize: 17,
-                draggable: true,
-                fill: currentFillColor || "black",
-                fontStyle: "normal",
-                fontFamily: "Arial",
-            };
+      const stage = stageRef.current?.getStage();
+      if (!stage) {
+        setIsEditingText(false);
+        setEditTextProps(null);
+        return;
+      }
 
-            dispatch(updateCurrentText(newText));
-            socket.emit("text:start", newText);
+      const stageBox = stage.container().getBoundingClientRect();
+
+      // Try to find the rendered Konva node for precise positioning
+      const textNode = stage.findOne(`#${textObj.id}`);
+
+      let textRect;
+      if (textNode) {
+        textRect = textNode.getClientRect();
+      } else {
+        // Fallback: approximate position using stage transform
+        const scaleX = stage.scaleX();
+        const scaleY = stage.scaleY();
+        textRect = {
+          x: textObj.x * scaleX + stage.x(),
+          y: textObj.y * scaleY + stage.y(),
+          width: 120,
+          height: (textObj.fontSize || 17) + 6,
+        };
+      }
+
+      // Calculate position of textarea in DOM space
+      const areaPosition = {
+        x: stageBox.left + textRect.x,
+        y: stageBox.top + textRect.y,
+      };
+
+      // Create native HTML textarea element for editing
+      const textarea = document.createElement("textarea");
+      textarea.value = isNewText ? "" : textObj.text;
+
+      const textColor = textObj.fill === "transparent" ? "#000" : (textObj.fill || "#000");
+
+      // Styling the textarea to match canvas text exactly (inline editing style)
+      Object.assign(textarea.style, {
+        position: "fixed",
+        top: `${areaPosition.y}px`,
+        left: `${areaPosition.x}px`,
+        width: `${Math.max(textRect.width, 100)}px`,
+        height: `${textRect.height}px`,
+        fontSize: `${textObj.fontSize || 17}px`,
+        fontFamily: textObj.fontFamily || "Arial",
+        fontStyle: textObj.fontStyle?.includes("italic") ? "italic" : "normal",
+        fontWeight: textObj.fontStyle?.includes("bold") ? "bold" : "normal",
+        textAlign: textObj.align || "left",
+        border: "none",
+        background: "transparent",
+        outline: "none",
+        color: textColor,
+        padding: "0",
+        margin: "0",
+        overflow: "hidden",
+        resize: "none",
+        zIndex: 10000,
+        minWidth: "100px",
+        minHeight: `${(textObj.fontSize || 17) + 6}px`,
+        lineHeight: "1.2",
+      });
+
+      // Prevent canvas mousedown from stealing focus
+      textarea.addEventListener("mousedown", (e) => {
+        e.stopPropagation();
+      });
+
+      document.body.appendChild(textarea);
+
+      // Focus and select all text after a microtask to ensure DOM is ready
+      requestAnimationFrame(() => {
+        textarea.focus();
+        if (!isNewText) {
+          textarea.select();
         }
-    };
+      });
 
-    /**
-     * Called to commit the currently active text object to the text array.
-     */
-    const handleCommitText = () => {
-        if (currentText) {
-            dispatch(commitCurrentText());
-            socket.emit("text:commit", currentText);
+      // Resize textarea dynamically based on content
+      const resizeTextarea = () => {
+        textarea.style.width = "auto";
+        textarea.style.height = "auto";
+        textarea.style.width = `${Math.max(textarea.scrollWidth + 10, 120)}px`;
+        textarea.style.height = `${Math.max(textarea.scrollHeight + 4, (textObj.fontSize || 17) + 10)}px`;
+      };
+
+      textarea.addEventListener("input", resizeTextarea);
+      resizeTextarea();
+
+      // On Enter key press, blur to trigger save
+      textarea.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          textarea.blur();
         }
-    };
+        // Allow Escape to cancel
+        if (e.key === "Escape") {
+          // Restore original text on cancel
+          textarea.value = textObj.text;
+          textarea.blur();
+        }
+      });
 
-    /**
-     * Called when user double-clicks on a text node.
-     * Creates and positions a native textarea over the canvas for live editing.
-     */
-    const handleEditText = (textObj) => {
-        setIsEditingText(true);
-        setEditTextProps(textObj);
+      // Ensure blur only fires once
+      let hasBlurred = false;
 
-        const stage = stageRef.current?.getStage();
-        if (!stage) return;
+      // When editing ends (on blur), update Redux and emit changes
+      textarea.addEventListener("blur", () => {
+        if (hasBlurred) return;
+        hasBlurred = true;
 
-        // Find the Konva Text node on stage using its ID
-        const textNode = stage.findOne(`#${textObj.id}`);
-        const textRect = textNode.getClientRect();                      //  Get bounding box
-        const stageBox = stage.container().getBoundingClientRect();     //  Get canvas DOM box
+        const newValue = textarea.value.trim();
 
-        // Calculate position of textarea in DOM space
-        const areaPosition = {
-            x: stageBox.left + textRect.x,
-            y: stageBox.top + textRect.y,
+        if (newValue && newValue !== textObj.text) {
+          // Text was changed — update it
+          dispatch(updateTextContent({ id: textObj.id, text: newValue }));
+          socket.emit("text:update", { id: textObj.id, text: newValue });
+        } else if (!newValue && isNewText) {
+          // Empty text on a brand new node — update with placeholder
+          dispatch(
+            updateTextContent({ id: textObj.id, text: "Type here..." }),
+          );
+          socket.emit("text:update", {
+            id: textObj.id,
+            text: "Type here...",
+          });
+        }
+        // If text is unchanged (editing existing text without changes), do nothing
+
+        textarea.removeEventListener("input", resizeTextarea);
+        textarea.remove();
+        setIsEditingText(false);
+        setEditTextProps(null);
+      });
+    },
+    [dispatch, stageRef, socket],
+  );
+
+  /**
+   * Called when the canvas is clicked using the "Text" tool.
+   * Adds a new text element and immediately opens the editor.
+   */
+  const handleAddText = useCallback(
+    (pointerPos, selectedTool) => {
+      if (isEditingText) return;
+
+      // Check if the click overlaps with any existing text
+      const clickedOnText = texts.some((t) => {
+        const textWidth = t.text.length * (t.fontSize * 0.6);
+        const textHeight = t.fontSize;
+        return (
+          pointerPos.x >= t.x &&
+          pointerPos.x <= t.x + textWidth &&
+          pointerPos.y >= t.y &&
+          pointerPos.y <= t.y + textHeight
+        );
+      });
+
+      if (selectedTool === "text" && !clickedOnText) {
+        const fill = currentFillColor === "transparent" ? "black" : (currentFillColor || "black");
+
+        const newText = {
+          id: uuidv4(),
+          x: pointerPos.x,
+          y: pointerPos.y,
+          text: "Type here...",
+          fontSize: 17,
+          draggable: true,
+          fill: fill,
+          fontStyle: "normal",
+          fontFamily: "Arial",
         };
 
-        // Create native HTML textarea element for editing
-        const textarea = document.createElement("textarea");
-        textarea.value = textObj.text;
+        // Add to Redux immediately — text is now in texts[]
+        dispatch(addText(newText));
+        socket.emit("text:start", newText);
 
-        // Styling the textarea to match canvas text
-        Object.assign(textarea.style, {
-            position: "absolute",
-            top: `${areaPosition.y}px`,
-            left: `${areaPosition.x}px`,
-            width: `${textRect.width}px`,
-            height: `${textRect.height}px`,
-            fontSize: `${textObj.fontSize}px`,
-            fontFamily: textObj.fontFamily || "Arial",
-            fontWeight: textObj.fontStyle || "normal",
-            textAlign: textObj.align || "left",
-            border: "none",
-            background: "transparent",
-            outline: "none",
-            color: "#000",
-            padding: "0",
-            margin: "0",
-            overflow: "hidden",
-            resize: "none",
-            zIndex: 1000,
-            minWidth: "100px",
-            minHeight: `${textObj.fontSize + 6}px`,
-        });
+        // Open editor after Konva has a chance to render the node
+        setTimeout(() => {
+          openTextEditor(newText, true);
+        }, 80);
+      }
+    },
+    [isEditingText, texts, currentFillColor, dispatch, socket, openTextEditor],
+  );
 
-        document.body.appendChild(textarea);
-        textarea.focus();   //  Focus input for typing
+  /**
+   * Called when user double-clicks on a text node to edit it.
+   */
+  const handleEditText = useCallback(
+    (textObj) => {
+      if (isEditingText) return;
+      openTextEditor(textObj, false);
+    },
+    [isEditingText, openTextEditor],
+  );
 
-        // Resize textarea dynamically based on content
-        const resizeTextarea = () => {
-            textarea.style.width = "auto";
-            textarea.style.height = "auto";
-            textarea.style.width = `${textarea.scrollWidth + 2}px`;
-            textarea.style.height = `${textarea.scrollHeight + 2}px`;
-        };
+  /**
+   * Called when a text object is dragged to a new position.
+   */
+  const handleUpdateTextPosition = useCallback(
+    (updatedText) => {
+      dispatch(
+        updateTextPosition({
+          id: updatedText.id,
+          x: updatedText.x,
+          y: updatedText.y,
+        }),
+      );
+      socket.emit("text:update", {
+        id: updatedText.id,
+        x: updatedText.x,
+        y: updatedText.y,
+      });
+    },
+    [dispatch, socket],
+  );
 
-        textarea.addEventListener("input", resizeTextarea);
-        resizeTextarea();
-
-        // On Enter key press, blur to trigger save
-        textarea.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") {
-                e.preventDefault();
-                textarea.blur();
-            }
-        });
-
-        // When editing ends (on blur), update Redux and emit changes
-        textarea.addEventListener("blur", () => {
-            if (textarea.value !== textObj.text) {
-                dispatch(updateTextContent({ id: textObj.id, text: textarea.value }));
-                socket.emit("text:update", { id: textObj.id, text: textarea.value });
-            }
-            textarea.removeEventListener("input", resizeTextarea);
-            textarea.remove();
-            setIsEditingText(false);                //  Exit editing mode
-        });
-    };
-
-    /**
-     * Called when a text object is moved
-     * Updates the text's position in the store and emits to socket.
-     * @param {Object} updatedText - The updated text object with new position.
-     */
-    const handleUpdateTextPosition = (updatedText) => {
-        dispatch(updateTextPosition({ id: updatedText.id, x: updatedText.x, y: updatedText.y }))
-        socket.emit("text:update", { id: updatedText.id, x: updatedText.x, y: updatedText.y })
-    }
-    // Return hook API for use in components
-    return {
-        handleAddText,
-        handleEditText,
-        handleCommitText,
-        isEditingText,
-        editTextProps,
-        handleUpdateTextPosition,
-    };
+  return {
+    handleAddText,
+    handleEditText,
+    isEditingText,
+    editTextProps,
+    handleUpdateTextPosition,
+  };
 };
 
 export default useTextEditing;

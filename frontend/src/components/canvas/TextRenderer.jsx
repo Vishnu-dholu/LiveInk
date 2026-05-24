@@ -1,8 +1,12 @@
 // Import Konva's Text component for rendering text on canvas
-import { setSelectedTextId } from "@/store/drawingSlice";
+import {
+  setSelectedTextId,
+  updateTextFill,
+  resetFillColor,
+} from "@/store/drawingSlice";
 import { Text } from "react-konva";
-// Import Redux hook to access state from the store
 import { useDispatch, useSelector } from "react-redux";
+import { socket } from "@/lib/socket";
 
 /**
  * TextRenderer handles rendering of all text elements on the canvas.
@@ -10,79 +14,72 @@ import { useDispatch, useSelector } from "react-redux";
  * - Displaying all saved text
  * - Handling double-click to enable editing
  * - Dragging and repositioning text elements
- * - Displaying temporary "currentText" during creation
+ * - Direct click-to-fill with the paint bucket tool
  */
 
-const TextRenderer = ({ isEditingText, editTextProps, onEdit, stageRef }) => {
-  // All saved text elements from Redux store
+const TextRenderer = ({ isEditingText, editTextProps, onEdit }) => {
   const texts = useSelector((state) => state.drawing.texts);
-  // A temporary text object that is currently being created
-  const currentText = useSelector((state) => state.drawing.currentText);
-  const fontSize = useSelector((state) => state.drawing.fontSize);
+  const selectedTool = useSelector((state) => state.drawing.selectedTool);
+  const currentFillColor = useSelector(
+    (state) => state.drawing.currentFillColor,
+  );
   const dispatch = useDispatch();
 
   /**
    * Handles when a text object is dragged and dropped to a new position.
-   * Updates the coordinates by calling the onEdit function.
    */
   const handleTextDragEnd = (e, textObj) => {
-    const { x, y } = e.target.position(); //  Get new position after drag
+    const { x, y } = e.target.position();
     onEdit({
-      ...textObj, //  Spread original properties of the text object
+      ...textObj,
       x,
       y,
-      isDrag: true, //  Mark this edit as a result of dragging
+      isDrag: true,
     });
   };
 
-  const handleTextDlbClick = (t) => {
-    onEdit(t);
+  /**
+   * Handles click on a text element.
+   * - Paint bucket tool: fills the text with the current color
+   * - Select tool: selects the text for settings panel
+   * - Other tools: selects the text
+   */
+  const handleTextClick = (t) => {
+    if (selectedTool === "paint") {
+      // Direct click-to-fill (same pattern as ShapeRenderer)
+      dispatch(updateTextFill({ id: t.id, fill: currentFillColor }));
+      socket.emit("text:fill", { id: t.id, fill: currentFillColor });
+      dispatch(resetFillColor());
+    } else {
+      dispatch(setSelectedTextId(t.id));
+    }
   };
 
   return (
     <>
-      {/* Render all finalized text elements */}
       {texts.map((t) => {
-        // Skip rendering the currently edited text
+        // Skip rendering the text currently being edited via textarea
         if (isEditingText && editTextProps?.id === t.id) return null;
 
         return (
           <Text
-            key={t.id} //  Unique key for each text object
-            id={t.id} //  ID used to identify which text is edited
-            text={
-              // If text is "Type here..." and this text is being edited, show empty string to allow user input
-              t.text === "Type here..." &&
-              isEditingText &&
-              editTextProps?.id === t.id
-                ? ""
-                : t.text
-            }
-            x={t.x} //  X position on canvas
-            y={t.y} //  Y position on canvas
+            key={`${t.id}-${t.fill}`}
+            id={t.id}
+            text={t.text}
+            x={t.x}
+            y={t.y}
             fontSize={t.fontSize}
             fontStyle={t.fontStyle || "normal"}
             fontFamily={t.fontFamily || "Arial"}
             fill={t.fill || "black"}
             width={t.width || undefined}
-            draggable
-            onClick={() => dispatch(setSelectedTextId(t.id))}
-            onDblClick={() => handleTextDlbClick(t)}
-            onDragEnd={(e) => handleTextDragEnd(e, t)} //  Handle repositioning after drag
+            draggable={selectedTool === "select"}
+            onClick={() => handleTextClick(t)}
+            onDblClick={() => onEdit(t)}
+            onDragEnd={(e) => handleTextDragEnd(e, t)}
           />
         );
       })}
-
-      {/* Render current text being created but not commited yet */}
-      {currentText && (
-        <Text
-          text={currentText.text} //  Temporary display of text
-          x={currentText.x}
-          y={currentText.y}
-          fontSize={currentText.fontSize}
-          fill="gray"
-        />
-      )}
     </>
   );
 };

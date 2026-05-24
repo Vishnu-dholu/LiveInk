@@ -7,6 +7,8 @@ const ChatPanel = ({ messages, onSendMessage }) => {
   const [message, setMessage] = useState("");
   const messagesEndRef = useRef(null);
 
+  const me = JSON.parse(localStorage.getItem("user") || "{}");
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -37,7 +39,6 @@ const ChatPanel = ({ messages, onSendMessage }) => {
           </p>
         ) : (
           messages.map((msg, index) => {
-            const me = JSON.parse(localStorage.getItem("user") || "{}");
             const isOwnMessage = msg.username === me.username;
 
             const formattedTime = new Date(msg.timestamp).toLocaleTimeString(
@@ -45,7 +46,7 @@ const ChatPanel = ({ messages, onSendMessage }) => {
               {
                 hour: "2-digit",
                 minute: "2-digit",
-              }
+              },
             );
 
             return (

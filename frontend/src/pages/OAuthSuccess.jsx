@@ -9,9 +9,29 @@ const OAuthSuccess = () => {
   useEffect(() => {
     if (token) {
       localStorage.setItem("token", token);
-      navigate("/canvas");
+
+      // Fetch user data
+      fetch("http://localhost:5001/api/auth/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then((user) => {
+          localStorage.setItem(
+            "user",
+            JSON.stringify({
+              userId: user.id,
+              username: user.username,
+              email: user.email,
+            }),
+          );
+          navigate("/canvas");
+        })
+        .catch((err) => {
+          console.error("Failed to fetch user after OAuth", err);
+          navigate("/login");
+        });
     }
-  }, [token]);
+  }, [token, navigate]);
   return <div>Logging you in...</div>;
 };
 

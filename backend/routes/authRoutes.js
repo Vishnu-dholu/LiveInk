@@ -2,9 +2,17 @@ import express from "express"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import pool from "../db.js"
+import rateLimit from "express-rate-limit";
 import { verifyToken } from "../middleware/authMiddleware.js"
 
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per window
+    message: { error: "Too many login attempts, please try again later." }
+});
+
 const router = express.Router()
+router.use(authLimiter)
 const JWT_SECRET = process.env.JWT_SECRET || "Your_secret_key"
 
 // Register endpoint
@@ -24,7 +32,7 @@ router.post("/register", async (req, res) => {
             [username, email, hashedPassword]
         )
 
-        const token = jwt.sign({ id: newUser.rows[0].id }, JWT_SECRET)
+        const token = jwt.sign({ id: newUser.rows[0].id }, JWT_SECRET, {expiresIn: "7d"})
 
         res.status(201).json({
             token, user: {

@@ -6,6 +6,7 @@ import dotenv from "dotenv"
 import authRoutes from "./routes/authRoutes.js"
 import oauthRoutes from "./routes/oauthRoutes.js"
 import roomRoutes from "./routes/roomRoutes.js"
+import jwt from "jsonwebtoken";
 import pool from "./db.js"
 import initializePassport from "./config/passport.js"
 import session from "express-session"
@@ -46,6 +47,25 @@ app.use("/api/auth", authRoutes)
 app.use("/auth", oauthRoutes)
 app.use("/api/rooms", roomRoutes)
 
+const JWT_SECRET = process.env.JWT_SECRET || "Your_secret_key";
+
+io.use((socket, next) => {
+    // Look for token in auth payload or headers
+    const token = socket.handshake.auth.token;
+
+    if(!token){
+        return next(new Error("Authentication error: No tojen provided"))
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET)
+        socket.userId = decoded.id
+        next()
+    } catch (err) {
+        return next(new Error("Authentication error: Invalid token"))
+    }
+})
+
 io.on("connection", (socket) => {
     console.log(`A user connected: ${socket.id}`)
 
@@ -68,7 +88,7 @@ io.on("connection", (socket) => {
         try {
             const users = joinRoom(roomId, userId, password, username)
             socket.join(roomId)
-            // socket.userId = userId
+            socket.userId = userId
             socket.roomId = roomId
 
             rooms[roomId] = rooms[roomId] || {}
@@ -87,7 +107,7 @@ io.on("connection", (socket) => {
 
             io.to(roomId).emit("room:members", { members, createdBy: room.createdBy })
 
-            callback({ success: true, users: members, createdBy: room.createdBy, history: room.messages })
+            callback({ success: true, users: members, createdBy: room.createdBy, history: room.messages, canvasState: room.canvasState || null })
         } catch (err) {
             callback({ success: false, message: err.message })
         }
@@ -109,7 +129,7 @@ io.on("connection", (socket) => {
 
         if (room) {
             room.users = room.users.filter(u => u.userId !== userId)
-            io.to(roomId).emit("room:member", { members: room.users, createdBy: room.createdBy });
+            io.to(roomId).emit("room:members", { members: room.users, createdBy: room.createdBy });
 
             if (room.users.length === 0) {
                 delete rooms[roomId]
@@ -129,75 +149,85 @@ io.on("connection", (socket) => {
     });
 
     socket.on("draw", (newLine) => {
-        socket.broadcast.emit("draw", newLine)
+        if(socket.roomId) socket.to(socket.roomId).emit("draw", newLine)
     });
 
     socket.on("drawShape", (shape) => {
-        socket.broadcast.emit("drawShape", shape)
+        if(socket.roomId) socket.to(socket.roomId).emit("drawShape", shape)
     });
 
     socket.on("draw:live", (newLine) => {
-        socket.broadcast.emit("draw:live", newLine)
+        if(socket.roomId) socket.to(socket.roomId).emit("draw:live", newLine)
     });
 
     socket.on("shape:live", (newLine) => {
-        socket.broadcast.emit("shape:live", newLine)
+        if(socket.roomId) socket.to(socket.roomId).emit("shape:live", newLine)
     });
 
     socket.on("shape:update", ({ id, updatedShape }) => {
-        socket.broadcast.emit("shape:update", { id, updatedShape })
+        if(socket.roomId) socket.to(socket.roomId).emit("shape:update", { id, updatedShape })
     })
 
     socket.on("text:start", (textObj) => {
-        socket.broadcast.emit("text:start", textObj);
+        if(socket.roomId) socket.to(socket.roomId).emit("text:start", textObj)
     });
 
     socket.on("text:update", (textObj) => {
-        socket.broadcast.emit("text:update", textObj);
+        if(socket.roomId) socket.to(socket.roomId).emit("text:update", textObj)
     });
 
     socket.on("text:commit", (textObj) => {
-        socket.broadcast.emit("text:commit", textObj);
+        if(socket.roomId) socket.to(socket.roomId).emit("text:commit", textObj)
     });
 
     socket.on("text:updateFontFamily", ({ id, fontFamily }) => {
-        socket.broadcast.emit("text:updateFontFamily", { id, fontFamily })
+        if(socket.roomId) socket.to(socket.roomId).emit("text:updateFontFamily", {id, fontFamily})
     })
 
     socket.on("text:updateFontStyle", ({ id, fontStyle }) => {
-        socket.broadcast.emit("text:updateFontStyle", { id, fontStyle })
+        if(socket.roomId) socket.to(socket.roomId).emit("text:updateFontStyle", {id, fontStyle})
     })
 
     socket.on("text:updateFontSize", ({ id, fontSize }) => {
-        socket.broadcast.emit("text:updateFontSize", { id, fontSize });
+        if(socket.roomId) socket.to(socket.roomId).emit("text:updateFontSize", {id, fontSize})
     });
 
     socket.on("erase", (coords) => {
-        socket.broadcast.emit("erase", coords);
+        if(socket.roomId) socket.to(socket.roomId).emit("erase", coords)
     });
 
     socket.on("undo", (data) => {
-        socket.broadcast.emit("undo", data);
+        if(socket.roomId) socket.to(socket.roomId).emit("undo", data)
     });
 
     socket.on("redo", (data) => {
-        socket.broadcast.emit("redo", data);
+        if(socket.roomId) socket.to(socket.roomId).emit("redo", data)
     });
 
     socket.on("clear", () => {
-        socket.broadcast.emit("clear");
+        if(socket.roomId) socket.to(socket.roomId).emit("clear")
     });
 
     socket.on("color:change", (newColor) => {
-        socket.broadcast.emit("color:change", newColor)
+        if(socket.roomId) socket.to(socket.roomId).emit("color:change", newColor)
     })
 
     socket.on("shape:fill", ({ id, fill }) => {
-        socket.broadcast.emit("shape:fill", { id, fill });
+        if(socket.roomId) socket.to(socket.roomId).emit("shape:fill", {id, fill})
     });
 
     socket.on("text:fill", ({ id, fill }) => {
-        socket.broadcast.emit("text:fill", { id, fill });
+        if(socket.roomId) socket.to(socket.roomId).emit("text:fill", {id, fill})
+    });
+
+    socket.on("sync:state", (stateData) => {
+        if (socket.roomId) {
+            // Save the state on the server for anyone who joins later!
+            rooms[socket.roomId].canvasState = stateData;
+            
+            // Broadcast the new state to everyone else in the room
+            socket.to(socket.roomId).emit("sync:state", stateData);
+        }
     });
 
     socket.on("disconnect", () => {
@@ -209,7 +239,7 @@ io.on("connection", (socket) => {
         if (room) {
             room.users = room.users.filter(u => u.userId !== userId)
 
-            io.to(roomId).emit("room:member", { members: room.users })
+            io.to(roomId).emit("room:members", { members: room.users, createdBy: room.createdBy })
 
             if (room.users.length === 0) {
                 delete rooms[roomId]
@@ -219,7 +249,7 @@ io.on("connection", (socket) => {
 });
 
 
-// }) Start the Express server on port 5000
+// Start the Express server on port 5001
 server.listen(5001, () => {
     console.log("Backend server running on http://localhost:5001")
 })

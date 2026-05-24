@@ -22,12 +22,12 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
   const liveShapes = useSelector((state) => state.drawing.liveShapes);
 
   const currentFillColor = useSelector(
-    (state) => state.drawing.currentFillColor
+    (state) => state.drawing.currentFillColor,
   );
 
   // Refs for Transformer and shape instances
   const transformerRef = useRef(null);
-  const shapeRefs = useRef([]);
+  const shapeRefs = useRef({});
 
   useEffect(() => {
     if (transformerRef.current && selectedShapeId !== null) {
@@ -40,7 +40,7 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
         // Optional: helpful for debugging
         console.warn(
           "Transformer node not found for shape id",
-          selectedShapeId
+          selectedShapeId,
         );
       }
     }
@@ -88,7 +88,7 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
               dispatch(setSelectedShapeId(shape.id));
             } else if (selectedTool === "paint") {
               dispatch(
-                updateShapeFill({ id: shape.id, fill: currentFillColor })
+                updateShapeFill({ id: shape.id, fill: currentFillColor }),
               );
               socket.emit("shape:fill", {
                 id: shape.id,
@@ -228,7 +228,7 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
             listening={false}
             fill="rgba(0,0,0,0.2)"
           />
-        )
+        ),
       )}
     </>
   );

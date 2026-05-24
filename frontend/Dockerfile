@@ -1,10 +1,10 @@
-# Use an official Node.js image as the base image
-FROM node:18-alpine
+# Use a newer Node.js image to fix the npm optional dependencies bug
+FROM node:24-alpine
 
 # Set the working directory inside the container
 WORKDIR /app
 
-# Copy package.json and package-lock.json to leverage Docker caching
+# We can safely copy both files now!
 COPY package.json package-lock.json ./
 
 # Install dependencies

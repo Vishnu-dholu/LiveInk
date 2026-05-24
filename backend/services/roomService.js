@@ -29,8 +29,6 @@ function joinRoom(roomId, userId, password, username) {
         room.users.push({ userId, username })
     }
 
-    console.log(roomId, userId, password, username);
-
     return room.users
 }
 

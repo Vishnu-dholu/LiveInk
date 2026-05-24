@@ -38,10 +38,15 @@ const CreateRoomForm = () => {
 
       const { userId, username } = user;
 
+      if (!socket.connected) {
+        socket.connect();
+      }
+
       socket.emit(
         "room:create",
         { userId, roomName, password, username },
         (response) => {
+          setIsLoading(false);
           if (response.success) {
             const roomId = response.roomId;
 
@@ -56,7 +61,6 @@ const CreateRoomForm = () => {
     } catch (err) {
       console.error(err);
       alert("Room creation failed");
-    } finally {
       setIsLoading(false);
     }
   };

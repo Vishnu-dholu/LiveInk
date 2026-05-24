@@ -1,5 +1,5 @@
 import { useSelector, useDispatch } from "react-redux";
-import { updateTextContent } from "@/store/drawingSlice";
+import { updateTextFontSize } from "@/store/drawingSlice";
 import { Label } from "@/components/ui/label";
 import { socket } from "@/lib/socket";
 
@@ -23,7 +23,7 @@ const FontSizeControl = () => {
         fontSize,
       };
 
-      dispatch(updateTextContent(payload));
+      dispatch(updateTextFontSize(payload));
 
       socket.emit("text:updateFontSize", payload);
     }

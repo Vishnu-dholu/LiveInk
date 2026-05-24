@@ -25,20 +25,22 @@ const DrawingStage = ({
   zoom,
 }) => {
   const dispatch = useDispatch();
-  // Hook to manage mouse-based drawing logic (down, move, up)
-  const { handleMouseDown, handleMouseMove, handleMouseUp, currentShape } =
-    useCanvasEvents({ selectedTool, stageRef });
 
   // Hook to manage double-click text editing functionality
   const {
+    handleAddText,
     handleEditText,
     isEditingText,
     editTextProps,
     handleUpdateTextPosition,
   } = useTextEditing(stageRef, socket);
 
+  // Hook to manage mouse-based drawing logic (down, move, up)
+  const { handleMouseDown, handleMouseMove, handleMouseUp, currentShape } =
+    useCanvasEvents({ selectedTool, stageRef, isEditingText, handleAddText });
+
   const showGrid = useSelector((state) => state.drawing.showGrid);
-  const isInteracting = useSelector((state) => state.drawing.isInteracting);
+  // const isInteracting = useSelector((state) => state.drawing.isInteracting);
 
   const width = window.innerWidth;
   const height = window.innerHeight;
@@ -59,7 +61,8 @@ const DrawingStage = ({
       scaleY={zoom}
       ref={stageRef} //  Assign the stageRef so Konva APIs can be used
       className="rounded-lg bg-white dark:bg-gray-400"
-      draggable={isPanning && !isInteracting}
+      // draggable={isPanning && !isInteracting}
+      draggable={isPanning}
       onDragEnd={handleDragEnd}
       style={{ borderRadius: "12px", cursor: isPanning ? "grab" : "crosshair" }}
       onMouseDown={!isPanning ? handleMouseDown : undefined} //  Start drawing (line or shape)
@@ -85,8 +88,8 @@ const DrawingStage = ({
 
         {/* Render static text elements and handle live editing */}
         <TextRenderer
-          isEditingText={isEditingText} //  If true, show editable textarea
-          editTextProps={editTextProps} //  Props for currently edited text
+          isEditingText={isEditingText}
+          editTextProps={editTextProps}
           onEdit={(updatedText) => {
             if (updatedText.isDrag) {
               handleUpdateTextPosition(updatedText);
@@ -94,8 +97,6 @@ const DrawingStage = ({
               handleEditText(updatedText);
             }
           }}
-          stageRef={stageRef}
-          socket={socket}
         />
       </Layer>
     </Stage>

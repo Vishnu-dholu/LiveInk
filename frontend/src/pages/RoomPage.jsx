@@ -46,6 +46,9 @@ const RoomPage = () => {
     setUsername(username);
 
     // Emit join-room event
+    if (!socket.connected) {
+      socket.connect();
+    }
     socket.emit(
       "room:join",
       { roomId, userId, username, password },

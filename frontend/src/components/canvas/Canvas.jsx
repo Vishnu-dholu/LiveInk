@@ -15,12 +15,18 @@ import {
   clearCanvas,
   updateCurrentLine,
   updateCurrentShape,
+  deleteText,
+  deleteShape,
   setStagePosition,
   setSelectedTool,
   setRoomInfo,
   updateUsers,
   updateCreatedBy,
 } from "@/store/drawingSlice";
+
+import { store } from "@/store/store";
+import { syncState } from "@/store/drawingSlice";
+
 // Socket instance for real-time collaboration
 import { socket } from "@/lib/socket";
 import { useSocketListeners } from "@/hooks/useSocketListeners";
@@ -41,7 +47,7 @@ const Canvas = () => {
   // Tracks the currently selected drawing tool
   const selectedTool = useSelector(
     (state) => state.drawing.selectedTool,
-    shallowEqual
+    shallowEqual,
   );
 
   // Redux state: all drawn lines
@@ -51,9 +57,12 @@ const Canvas = () => {
   // Redux state: the current line being drawn (live)
   const currentLine = useSelector(
     (state) => state.drawing.currentLine,
-    shallowEqual
+    shallowEqual,
   );
   const zoom = useSelector((state) => state.drawing.zoom, shallowEqual);
+
+  const selectedTextId = useSelector((state) => state.drawing.selectedTextId);
+  const selectedShapeId = useSelector((state) => state.drawing.selectedShapeId);
 
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false); // Manage color picker
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -73,6 +82,8 @@ const Canvas = () => {
 
   // 1) on-mount & on socket "connect" -> re-join the room
   useEffect(() => {
+    socket.connect();
+
     if (!roomId || !me.userId) {
       navigate("/join-room");
       return;
@@ -96,9 +107,13 @@ const Canvas = () => {
         setChatHistory(resp.history || []);
         // also update users / createdBy if you like
         dispatch(
-          setRoomInfo({ roomId, createdBy: resp.createdBy, users: resp.users })
+          setRoomInfo({ roomId, createdBy: resp.createdBy, users: resp.users }),
         );
-      }
+
+        if (resp.canvasState) {
+          dispatch(syncState(resp.canvasState));
+        }
+      },
     );
   }, [roomId, me.userId, me.username, roomPassword]);
 
@@ -120,11 +135,11 @@ const Canvas = () => {
 
     const offsetX = Math.max(
       0,
-      screenWidth / 2 - (virtualCanvasWidth * zoom) / 2
+      screenWidth / 2 - (virtualCanvasWidth * zoom) / 2,
     );
     const offsetY = Math.max(
       0,
-      screenHeight / 2 - (virtualCanvasHeight * zoom) / 2
+      screenHeight / 2 - (virtualCanvasHeight * zoom) / 2,
     );
 
     dispatch(setStagePosition({ x: offsetX, y: offsetY }));
@@ -136,21 +151,6 @@ const Canvas = () => {
     return () => window.removeEventListener("resize", centerStage);
   }, [centerStage]);
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.ctrlKey && e.key === "z") {
-        handleUndo();
-      } else if (e.ctrlKey && e.shiftKey && e.key === "Z") {
-        handleRedo();
-      } else if (e.key === "Delete") {
-        handleClear();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
   // Handler for tool selection from toolbox
   const handleSelectTool = useCallback(
     (tool) => {
@@ -161,32 +161,93 @@ const Canvas = () => {
         setIsColorPickerOpen(false); // Close color picker when other tool is selected
       }
     },
-    [dispatch]
+    [dispatch],
   );
 
   // Undo action and emit to other users via socket
   const handleUndo = useCallback(() => {
     dispatch(undoAction());
-    dispatch(updateCurrentLine([]));
-    dispatch(updateCurrentShape([]));
-    socket.emit("undo", { userId: socket.id });
+
+    setTimeout(() => {
+      const state = store.getState().drawing;
+      socket.emit("sync:state", {
+        lines: state.lines,
+        shapes: state.shapes,
+        texts: state.texts,
+      });
+    }, 0);
   }, [dispatch]);
 
   // Redo action and emit to other users via socket
   const handleRedo = useCallback(() => {
     dispatch(redoAction());
-    dispatch(updateCurrentLine([]));
-    dispatch(updateCurrentShape([]));
-    socket.emit("redo", { userId: socket.id });
+
+    setTimeout(() => {
+      const state = store.getState().drawing;
+      socket.emit("sync:state", {
+        lines: state.lines,
+        shapes: state.shapes,
+        texts: state.texts,
+      });
+    }, 0);
   }, [dispatch]);
 
   // Clear canvas and emit to other users
   const handleClear = useCallback(() => {
     dispatch(clearCanvas());
-    dispatch(updateCurrentLine([]));
-    dispatch(updateCurrentShape([]));
-    socket.emit("clear");
+
+    setTimeout(() => {
+      socket.emit("sync:state", { lines: [], shapes: [], texts: [] });
+    }, 0);
   }, [dispatch]);
+
+  // Delete selected item and emit to other users via socket
+  const handleDeleteSelected = useCallback(() => {
+    if (selectedTextId) {
+      dispatch(deleteText(selectedTextId));
+    } else if (selectedShapeId) {
+      dispatch(deleteShape(selectedShapeId));
+    } else {
+      return;
+    }
+
+    setTimeout(() => {
+      const state = store.getState().drawing;
+      socket.emit("sync:state", {
+        lines: state.lines,
+        shapes: state.shapes,
+        texts: state.texts,
+      });
+    }, 0);
+  }, [dispatch, selectedTextId, selectedShapeId]);
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.key === "z") {
+        handleUndo();
+      } else if (e.ctrlKey && e.shiftKey && e.key === "Z") {
+        handleRedo();
+      } else if (e.key === "Delete") {
+        if (selectedTextId || selectedShapeId) {
+          handleDeleteSelected();
+        } else {
+          // Fallback: if nothing is selected, clear everything
+          handleClear();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    handleUndo,
+    handleRedo,
+    handleClear,
+    handleDeleteSelected,
+    selectedTextId,
+    selectedShapeId,
+  ]);
 
   // Memoize DrawingStage props to prevent unnecessary re-renders
   const drawingStageProps = useMemo(
@@ -198,7 +259,7 @@ const Canvas = () => {
       currentLine,
       zoom,
     }),
-    [selectedTool, lines, shapes, currentLine, zoom]
+    [selectedTool, lines, shapes, currentLine, zoom],
   );
 
   return (
@@ -222,6 +283,8 @@ const Canvas = () => {
             onUndo={handleUndo}
             onRedo={handleRedo}
             onClear={handleClear}
+            onDeleteSelected={handleDeleteSelected}
+            hasSelection={!!(selectedTextId || selectedShapeId)}
             stageRef={stageRef}
           />
         </div>

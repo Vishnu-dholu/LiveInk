@@ -12,7 +12,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isDarkMode, setIsDarkMode] = useState(
-    localStorage.getItem("theme") === "dark"
+    localStorage.getItem("theme") === "dark",
   );
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -165,7 +165,7 @@ const LoginPage = () => {
           </Button>
         </form>
         <div className="flex flex-col gap-3 mt-6">
-          <a href="http://localhost:5000/auth/google">
+          <a href="http://localhost:5001/auth/google">
             <Button
               variant="outline"
               className="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-100 text-gray-900 font-semibold hover:bg-gray-200 transition"
@@ -175,7 +175,7 @@ const LoginPage = () => {
             </Button>
           </a>
 
-          <a href="http://localhost:5000/auth/github">
+          <a href="http://localhost:5001/auth/github">
             <Button
               variant="outline"
               className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white font-semibold hover:bg-gray-800 transition"

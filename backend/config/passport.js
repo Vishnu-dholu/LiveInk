@@ -14,14 +14,14 @@ export default function initializePassport() {
     })
 
     passport.deserializeUser(async (id, done) => {
-        const result = await pool.query("SELECT * FROM users WHERE id = $1", [id])
+        const result = await pool.query("SELECT id, username, email FROM users WHERE id = $1", [id])
         done(null, result.rows[0])
     })
 
     passport.use(new GoogleStrategy({
         clientID: GOOGLE_CLIENT_ID,
         clientSecret: GOOGLE_CLIENT_SECRET,
-        callbackURL: "http://localhost:5000/auth/google/callback"
+        callbackURL: "http://localhost:5001/auth/google/callback"
     }, async (accessToken, refreshToken, profile, done) => {
         const email = profile.emails[0].value
         const username = profile.displayName
@@ -36,7 +36,7 @@ export default function initializePassport() {
     passport.use(new GitHubStrategy({
         clientID: GITHUB_CLIENT_ID,
         clientSecret: GITHUB_CLIENT_SECRET,
-        callbackURL: "http://localhost:5000/auth/github/callback"
+        callbackURL: "http://localhost:5001/auth/github/callback"
     }, async (accessToken, refreshToken, profile, done) => {
         const username = profile.username
         const email = profile.email?.[0]?.value || `${username}@github.com`

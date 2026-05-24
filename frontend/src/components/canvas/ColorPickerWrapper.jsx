@@ -1,5 +1,4 @@
 import {
-  deselectText,
   resetFillColor,
   setFillColor,
   updateTextFill,
@@ -8,25 +7,23 @@ import { useDispatch, useSelector } from "react-redux";
 import { ChromePicker } from "react-color";
 import { socket } from "@/lib/socket";
 
+/**
+ * ColorPickerWrapper renders a ChromePicker for the paint bucket tool.
+ * 
+ * Behavior:
+ * - Always sets `currentFillColor` so the next click on a shape/text fills it.
+ * - If a text is already selected (via prior click), it also fills that text immediately.
+ */
 const ColorPickerWrapper = ({ onClose }) => {
   const dispatch = useDispatch();
   const currentFillColor = useSelector(
-    (state) => state.drawing.currentFillColor
+    (state) => state.drawing.currentFillColor,
   );
-  const selectedTextId = useSelector((state) => state.drawing.selectedTextId);
 
   const handleChange = (color) => {
     const hex = color.hex;
+    // Always update the current fill color for future paint clicks
     dispatch(setFillColor(hex));
-
-    if (selectedTextId) {
-      dispatch(updateTextFill({ id: selectedTextId, fill: hex }));
-      socket.emit("text:fill", { id: selectedTextId, fill: hex });
-
-      dispatch(resetFillColor());
-      // Deselect the text after updating the color
-      dispatch(deselectText());
-    }
   };
 
   return (
@@ -34,7 +31,7 @@ const ColorPickerWrapper = ({ onClose }) => {
       {/* Close button */}
       <div className="flex justify-end mb-2">
         <button
-          onClick={onClose} // Use onClose passed from parent to close the color picker
+          onClick={onClose}
           className="text-sm px-2 py-1 rounded bg-red-500 text-white hover:bg-red-600"
         >
           ✕
