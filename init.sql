@@ -7,9 +7,22 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Drawings table
-CREATE TABLE IF NOT EXISTS drawings (
+-- Rooms table
+CREATE TABLE IF NOT EXISTS rooms (
+  id VARCHAR(255) PRIMARY KEY, -- Using nanoid(8)
+  name VARCHAR(255) NOT NULL,
+  password TEXT,
+  creator_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  canvas_state JSONB DEFAULT '{}',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Messages table
+CREATE TABLE IF NOT EXISTS messages (
   id SERIAL PRIMARY KEY,
-  drawing_data JSON NOT NULL,
+  room_id VARCHAR(255) REFERENCES rooms(id) ON DELETE CASCADE,
+  username VARCHAR(255) NOT NULL,
+  text TEXT NOT NULL,
+  timestamp BIGINT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
