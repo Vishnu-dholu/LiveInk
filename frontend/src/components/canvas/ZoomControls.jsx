@@ -1,10 +1,10 @@
 import { setZoom } from "@/store/drawingSlice";
 import { useDispatch, useSelector } from "react-redux";
-import { Button } from "../ui/button";
+import { Plus, Minus, RotateCcw } from "lucide-react";
 
 /**
  *  ZoomControls component provides UI to zoom in/out and reset zoom level.
- *  It adjusts the zoom level in the Redux store and updates the canvas view.
+ *  It uses a modern glassmorphic horizontal pill design.
  */
 const ZoomControls = () => {
   const dispatch = useDispatch();
@@ -22,39 +22,40 @@ const ZoomControls = () => {
   };
 
   return (
-    <div className="flex flex-col items-center gap-2 border-2 border-gray-400 bg-gray-200 dark:bg-blue-900 px-3 py-2 rounded-md shadow-sm">
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleZoom(-0.1)}
-          className="px-3 text-lg dark:bg-blue-400 dark:text-gray-900"
-        >
-          −
-        </Button>
+    <div className="flex items-center gap-1 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-gray-200/50 dark:border-gray-800/50 shadow-xl rounded-full px-2 py-1.5 transition-all hover:shadow-2xl">
+      <button
+        onClick={() => handleZoom(-0.1)}
+        className="w-8 h-8 rounded-full flex items-center justify-center p-0 hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all outline-none"
+        title="Zoom Out (Ctrl -)"
+      >
+        <Minus size={18} />
+      </button>
 
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          {(zoom * 100).toFixed(0)}%
-        </span>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => handleZoom(0.1)}
-          className="px-3 text-lg dark:bg-blue-400 dark:text-gray-900"
-        >
-          +
-        </Button>
+      <div
+        className="text-sm font-semibold text-gray-700 dark:text-gray-200 min-w-[3.5rem] text-center cursor-pointer select-none hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+        onClick={handleReset}
+        title="Reset Zoom (Ctrl 0)"
+      >
+        {(zoom * 100).toFixed(0)}%
       </div>
 
-      <Button
-        variant="secondary"
-        size="sm"
-        onClick={handleReset}
-        className="text-xs dark:bg-blue-400 dark:text-gray-900"
+      <button
+        onClick={() => handleZoom(0.1)}
+        className="w-8 h-8 rounded-full flex items-center justify-center p-0 hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all outline-none"
+        title="Zoom In (Ctrl +)"
       >
-        Reset
-      </Button>
+        <Plus size={18} />
+      </button>
+
+      <div className="w-[1px] h-5 bg-gray-300 dark:bg-gray-700 mx-1" />
+
+      <button
+        onClick={handleReset}
+        className="w-8 h-8 rounded-full flex items-center justify-center p-0 hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all outline-none"
+        title="Reset Zoom (Ctrl 0)"
+      >
+        <RotateCcw size={16} />
+      </button>
     </div>
   );
 };

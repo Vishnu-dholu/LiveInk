@@ -7,6 +7,7 @@ import { shallowEqual } from "react-redux";
 import Toolbar from "./Toolbar"; //  Top-bar with undo, redo, clear
 import Toolbox from "./Toolbox"; //  Side toolbox with drawing tools
 import DrawingStage from "./DrawingStage"; //  The Konva canvas rendering layer
+import ZoomControls from "./ZoomControls"; //  Controls for zoom
 
 // Redux actions for undo, redo and clearing canvas
 import {
@@ -18,6 +19,7 @@ import {
   deleteText,
   deleteShape,
   setStagePosition,
+  setZoom,
   setSelectedTool,
   setRoomInfo,
   updateUsers,
@@ -235,6 +237,17 @@ const Canvas = () => {
           // Fallback: if nothing is selected, clear everything
           handleClear();
         }
+      } else if (e.ctrlKey || e.metaKey) {
+        if (e.key === "=" || e.key === "+") {
+          e.preventDefault();
+          dispatch(setZoom(Math.min(zoom + 0.1, 3)));
+        } else if (e.key === "-") {
+          e.preventDefault();
+          dispatch(setZoom(Math.max(zoom - 0.1, 0.2)));
+        } else if (e.key === "0") {
+          e.preventDefault();
+          dispatch(setZoom(1));
+        }
       }
     };
 
@@ -247,6 +260,8 @@ const Canvas = () => {
     handleDeleteSelected,
     selectedTextId,
     selectedShapeId,
+    zoom,
+    dispatch,
   ]);
 
   // Memoize DrawingStage props to prevent unnecessary re-renders
@@ -305,10 +320,13 @@ const Canvas = () => {
         <div className="flex w-full max-w-fit flex-1 gap-2 overflow-hidden">
           {/* Canvas Area */}
           <div
-            className="flex-1 rounded-2xl shadow-lg border bg-[radial-gradient(#d4d4d4_1px,transparent_1px)] bg-[size:20px_20px] dark:bg-[radial-gradient(#4b5563_1px,transparent_1px)] overflow-hidden transition-transform duration-500 ease-in-out"
+            className="flex-1 rounded-2xl shadow-lg border bg-[radial-gradient(#d4d4d4_1px,transparent_1px)] bg-[size:20px_20px] dark:bg-[radial-gradient(#4b5563_1px,transparent_1px)] overflow-hidden transition-transform duration-500 ease-in-out relative"
             style={{ transformOrigin: "center center" }}
           >
             <DrawingStage {...drawingStageProps} />
+            <div className="absolute bottom-4 left-4 z-10">
+              <ZoomControls />
+            </div>
           </div>
 
           <div

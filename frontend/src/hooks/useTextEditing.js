@@ -46,17 +46,23 @@ const useTextEditing = (stageRef, socket) => {
       const textNode = stage.findOne(`#${textObj.id}`);
 
       let textRect;
+      let scaleX = 1;
+      let scaleY = 1;
+
       if (textNode) {
         textRect = textNode.getClientRect();
+        // The scale of the stage
+        scaleX = stage.scaleX();
+        scaleY = stage.scaleY();
       } else {
         // Fallback: approximate position using stage transform
-        const scaleX = stage.scaleX();
-        const scaleY = stage.scaleY();
+        scaleX = stage.scaleX();
+        scaleY = stage.scaleY();
         textRect = {
           x: textObj.x * scaleX + stage.x(),
           y: textObj.y * scaleY + stage.y(),
-          width: 120,
-          height: (textObj.fontSize || 17) + 6,
+          width: 120 * scaleX,
+          height: ((textObj.fontSize || 17) + 6) * scaleY,
         };
       }
 
@@ -73,13 +79,15 @@ const useTextEditing = (stageRef, socket) => {
       const textColor = textObj.fill === "transparent" ? "#000" : (textObj.fill || "#000");
 
       // Styling the textarea to match canvas text exactly (inline editing style)
+      const scaledFontSize = (textObj.fontSize || 17) * scaleX;
+      
       Object.assign(textarea.style, {
         position: "fixed",
         top: `${areaPosition.y}px`,
         left: `${areaPosition.x}px`,
-        width: `${Math.max(textRect.width, 100)}px`,
+        width: `${Math.max(textRect.width, 100 * scaleX)}px`,
         height: `${textRect.height}px`,
-        fontSize: `${textObj.fontSize || 17}px`,
+        fontSize: `${scaledFontSize}px`,
         fontFamily: textObj.fontFamily || "Arial",
         fontStyle: textObj.fontStyle?.includes("italic") ? "italic" : "normal",
         fontWeight: textObj.fontStyle?.includes("bold") ? "bold" : "normal",
@@ -93,8 +101,8 @@ const useTextEditing = (stageRef, socket) => {
         overflow: "hidden",
         resize: "none",
         zIndex: 10000,
-        minWidth: "100px",
-        minHeight: `${(textObj.fontSize || 17) + 6}px`,
+        minWidth: `${100 * scaleX}px`,
+        minHeight: `${((textObj.fontSize || 17) + 6) * scaleY}px`,
         lineHeight: "1.2",
       });
 
@@ -117,16 +125,16 @@ const useTextEditing = (stageRef, socket) => {
       const resizeTextarea = () => {
         textarea.style.width = "auto";
         textarea.style.height = "auto";
-        textarea.style.width = `${Math.max(textarea.scrollWidth + 10, 120)}px`;
-        textarea.style.height = `${Math.max(textarea.scrollHeight + 4, (textObj.fontSize || 17) + 10)}px`;
+        textarea.style.width = `${Math.max(textarea.scrollWidth + 10, 120 * scaleX)}px`;
+        textarea.style.height = `${Math.max(textarea.scrollHeight + 4, ((textObj.fontSize || 17) + 10) * scaleY)}px`;
       };
 
       textarea.addEventListener("input", resizeTextarea);
       resizeTextarea();
 
-      // On Enter key press, blur to trigger save
+      // On Ctrl+Enter key press, blur to trigger save
       textarea.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
+        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
           e.preventDefault();
           textarea.blur();
         }
@@ -181,10 +189,12 @@ const useTextEditing = (stageRef, socket) => {
     (pointerPos, selectedTool) => {
       if (isEditingText) return;
 
-      // Check if the click overlaps with any existing text
+      // Check if the click overlaps with any existing text (multi-line supported)
       const clickedOnText = texts.some((t) => {
-        const textWidth = t.text.length * (t.fontSize * 0.6);
-        const textHeight = t.fontSize;
+        const lines = t.text.split("\n");
+        const maxLineLength = Math.max(...lines.map(line => line.length));
+        const textWidth = maxLineLength * (t.fontSize * 0.6);
+        const textHeight = lines.length * (t.fontSize * 1.2);
         return (
           pointerPos.x >= t.x &&
           pointerPos.x <= t.x + textWidth &&

@@ -9,7 +9,7 @@ import TextRenderer from "./TextRenderer";
 // Custom hooks for handling canvas interactions
 import useCanvasEvents from "../../hooks/useCanvasEvents"; //  Manages mouse drawing events
 import useTextEditing from "../../hooks/useTextEditing"; //  Manages in-place text editing logic
-import { setStagePosition } from "@/store/drawingSlice";
+import { setStagePosition, setZoom } from "@/store/drawingSlice";
 
 // Socket instance for real-time syncing
 import { socket } from "@/lib/socket";
@@ -40,6 +40,8 @@ const DrawingStage = ({
     useCanvasEvents({ selectedTool, stageRef, isEditingText, handleAddText });
 
   const showGrid = useSelector((state) => state.drawing.showGrid);
+  const stageX = useSelector((state) => state.drawing.stageX);
+  const stageY = useSelector((state) => state.drawing.stageY);
   // const isInteracting = useSelector((state) => state.drawing.isInteracting);
 
   const width = window.innerWidth;
@@ -50,7 +52,40 @@ const DrawingStage = ({
   // Update stage position when dragging ends (only in select mode)
   const handleDragEnd = (e) => {
     if (!isPanning) return;
+    // Ensure we only update if the stage itself was dragged, not a child element
+    if (e.target !== e.target.getStage()) return;
     dispatch(setStagePosition({ x: e.target.x(), y: e.target.y() }));
+  };
+
+  const handleWheel = (e) => {
+    e.evt.preventDefault();
+    const stage = stageRef.current?.getStage();
+    if (!stage) return;
+
+    const oldScale = stage.scaleX();
+    const pointer = stage.getPointerPosition();
+
+    if (!pointer) return;
+
+    const scaleBy = 1.05;
+    const direction = e.evt.deltaY > 0 ? -1 : 1;
+
+    const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
+    const boundedScale = Math.max(0.2, Math.min(newScale, 3));
+
+    dispatch(setZoom(boundedScale));
+
+    const mousePointTo = {
+      x: (pointer.x - stage.x()) / oldScale,
+      y: (pointer.y - stage.y()) / oldScale,
+    };
+
+    const newPos = {
+      x: pointer.x - mousePointTo.x * boundedScale,
+      y: pointer.y - mousePointTo.y * boundedScale,
+    };
+
+    dispatch(setStagePosition(newPos));
   };
 
   return (
@@ -59,11 +94,14 @@ const DrawingStage = ({
       height={height}
       scaleX={zoom}
       scaleY={zoom}
+      x={stageX}
+      y={stageY}
       ref={stageRef} //  Assign the stageRef so Konva APIs can be used
       className="rounded-lg bg-white dark:bg-gray-400"
       // draggable={isPanning && !isInteracting}
       draggable={isPanning}
       onDragEnd={handleDragEnd}
+      onWheel={handleWheel}
       style={{ borderRadius: "12px", cursor: isPanning ? "grab" : "crosshair" }}
       onMouseDown={!isPanning ? handleMouseDown : undefined} //  Start drawing (line or shape)
       onMouseMove={!isPanning ? handleMouseMove : undefined} //  Draw as the mouse moves
