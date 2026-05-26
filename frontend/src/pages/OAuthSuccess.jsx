@@ -11,9 +11,12 @@ const OAuthSuccess = () => {
       localStorage.setItem("token", token);
 
       // Fetch user data
-      fetch("http://localhost:5001/api/auth/me", {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      fetch(
+        `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}/api/auth/me`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      )
         .then((res) => res.json())
         .then((user) => {
           localStorage.setItem(

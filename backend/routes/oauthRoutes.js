@@ -1,21 +1,43 @@
-import express from "express"
-import passport from "passport"
-import jwt from "jsonwebtoken"
+import express from "express";
+import passport from "passport";
+import jwt from "jsonwebtoken";
 
-const router = express.Router()
-const JWT_SECRET = process.env.JWT_SECRET || "Your_secret_key"
+const router = express.Router();
+const JWT_SECRET = process.env.JWT_SECRET || "Your_secret_key";
 
-router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }))
-router.get("/github", passport.authenticate("github", { scope: ["user:email"] }))
+router.get(
+  "/google",
+  passport.authenticate("google", { scope: ["profile", "email"] }),
+);
+router.get(
+  "/github",
+  passport.authenticate("github", { scope: ["user:email"] }),
+);
 
-router.get("/google/callback", passport.authenticate("google", { session: false }), (req, res) => {
-    const token = jwt.sign({ id: req.user.id }, JWT_SECRET, { expiresIn: "7d" })
-    res.redirect(`http://localhost:5173/oauth-success?token=${token}`)
-})
+router.get(
+  "/google/callback",
+  passport.authenticate("google", { session: false }),
+  (req, res) => {
+    const token = jwt.sign({ id: req.user.id }, JWT_SECRET, {
+      expiresIn: "7d",
+    });
+    res.redirect(
+      `${process.env.CLIENT_URL || "http://localhost:5173"}/oauth-success?token=${token}`,
+    );
+  },
+);
 
-router.get("/github/callback", passport.authenticate("github", { session: false }), (req, res) => {
-    const token = jwt.sign({ id: req.user.id }, JWT_SECRET, { expiresIn: "7d" })
-    res.redirect(`http://localhost:5173/oauth-success?token=${token}`)
-})
+router.get(
+  "/github/callback",
+  passport.authenticate("github", { session: false }),
+  (req, res) => {
+    const token = jwt.sign({ id: req.user.id }, JWT_SECRET, {
+      expiresIn: "7d",
+    });
+    res.redirect(
+      `${process.env.CLIENT_URL || "http://localhost:5173"}/oauth-success?token=${token}`,
+    );
+  },
+);
 
-export default router
+export default router;

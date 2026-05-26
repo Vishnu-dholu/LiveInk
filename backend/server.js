@@ -42,14 +42,19 @@ app.use(
 const server = createServer(app); //  Create an HTTP server
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173", // Allow connections from the frontend
+    origin: process.env.CLIENT_URL || "http://localhost:5173", // Allow connections from the frontend
     methods: ["GET", "POST"], // Allow GET and POST requests
     credentials: true,
   },
 });
 
 //  Middleware to enable CORS and JSON parsing
-app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use(passport.initialize());
 app.use(passport.session());
@@ -280,7 +285,7 @@ io.on("connection", (socket) => {
   });
 });
 
-// Start the Express server on port 5001
-server.listen(5001, () => {
-  console.log("Backend server running on http://localhost:5001");
+const PORT = process.env.PORT || 5001;
+server.listen(PORT, () => {
+  console.log(`Backend server running on port ${PORT}`);
 });
