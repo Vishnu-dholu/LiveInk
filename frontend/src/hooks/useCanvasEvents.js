@@ -1,17 +1,21 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
 import {
   addLine,
   drawShape,
   updateCurrentLine,
-  removeLineAt,
+  beginErase,
+  eraseAt,
+  eraseShape,
+  eraseText,
   updateCurrentShape,
   clearCurrentShape,
   setSelectedTool,
   resetFillColor,
 } from "@/store/drawingSlice";
 import { socket } from "@/lib/socket";
+import { encode } from "@/proto/codec";
 
 /**
  *  Custom hook that handles all mouse events on the canvas
@@ -33,8 +37,11 @@ const useCanvasEvent = ({
   const currentStrokeWidth = useSelector(
     (state) => state.drawing.currentStrokeWidth,
   );
+  const zoom = useSelector((state) => state.drawing.zoom);
 
   const [isMouseDown, setIsMouseDown] = useState(false); //  Track if mouse is being held down
+  const lastSentIndexRef = useRef(0);
+  const eraseBatchRef = useRef([]);
 
   /**
    *  Calculates the current pointer position relative to canvas,
@@ -72,13 +79,18 @@ const useCanvasEvent = ({
 
     // Handle tool-specific actions
     if (selectedTool === "pen" || selectedTool === "pencil") {
+      lastSentIndexRef.current = 0;
       dispatch(updateCurrentLine([pos.x, pos.y])); // Start drawing
     } else if (["square", "rectangle"].includes(selectedTool)) {
       // Start drawing a shape
       dispatch(updateCurrentShape({ x: pos.x, y: pos.y, width: 0, height: 0 }));
     } else if (selectedTool === "eraser") {
-      dispatch(removeLineAt({ x: pos.x, y: pos.y }));
-      socket.emit("erase", { x: pos.x, y: pos.y });
+      dispatch(beginErase());
+      const radius = 20 / zoom;
+      dispatch(eraseAt({ x: pos.x, y: pos.y, radius }));
+      dispatch(eraseShape({ x: pos.x, y: pos.y, radius }));
+      dispatch(eraseText({ x: pos.x, y: pos.y, radius }));
+      eraseBatchRef.current.push({ x: pos.x, y: pos.y });
     } else if (selectedTool === "text") {
       handleAddText(pos, selectedTool);
     } else if (selectedTool === "circle") {
@@ -101,7 +113,13 @@ const useCanvasEvent = ({
       if (currentLine.length > 0) {
         const updatedLine = [...currentLine, pos.x, pos.y];
         dispatch(updateCurrentLine(updatedLine));
-        socket.emit("draw:live", { points: updatedLine, tool: selectedTool });
+        
+        const newPoints = updatedLine.slice(lastSentIndexRef.current);
+        if (newPoints.length > 0) {
+            const payload = encode("DrawLive", { points: newPoints, tool: selectedTool, socketId: socket.id });
+            if (payload) socket.emit("draw:live", payload);
+            lastSentIndexRef.current = updatedLine.length;
+        }
       }
     } else if (selectedTool === "square" && currentShape) {
       // Keep shape a square by taking max distance
@@ -115,7 +133,8 @@ const useCanvasEvent = ({
         height: size,
       };
       dispatch(updateCurrentShape(updatedShape));
-      socket.emit("shape:live", updatedShape);
+      const payload = encode("ShapeLive", { ...updatedShape, type: "square", socketId: socket.id });
+      if (payload) socket.emit("shape:live", payload);
     } else if (selectedTool === "rectangle" && currentShape) {
       // Update rectangle width/height
       const updatedShape = {
@@ -124,11 +143,14 @@ const useCanvasEvent = ({
         height: pos.y - currentShape.y,
       };
       dispatch(updateCurrentShape(updatedShape));
-      socket.emit("shape:live", updatedShape);
+      const payload = encode("ShapeLive", { ...updatedShape, type: "rect", socketId: socket.id });
+      if (payload) socket.emit("shape:live", payload);
     } else if (selectedTool === "eraser") {
-      // Erase  as user moves
-      dispatch(removeLineAt({ x: pos.x, y: pos.y }));
-      socket.emit("erase", { x: pos.x, y: pos.y });
+      const radius = 20 / zoom;
+      dispatch(eraseAt({ x: pos.x, y: pos.y, radius }));
+      dispatch(eraseShape({ x: pos.x, y: pos.y, radius }));
+      dispatch(eraseText({ x: pos.x, y: pos.y, radius }));
+      eraseBatchRef.current.push({ x: pos.x, y: pos.y });
     } else if (selectedTool === "circle" && currentShape) {
       // Calculate radius using distance formula
       const dx = pos.x - currentShape.x;
@@ -139,7 +161,8 @@ const useCanvasEvent = ({
         radius,
       };
       dispatch(updateCurrentShape(updatedShape));
-      socket.emit("shape:live", updatedShape);
+      const payload = encode("ShapeLive", { ...updatedShape, type: "circle", socketId: socket.id });
+      if (payload) socket.emit("shape:live", payload);
     }
   };
 
@@ -159,9 +182,11 @@ const useCanvasEvent = ({
           strokeWidth: currentStrokeWidth,
           opacity: selectedTool === "pen" ? 1 : 0.6,
           dash: selectedTool === "pencil" ? [5, 5] : [],
+          socketId: socket.id,
         };
         dispatch(addLine(newLine));
-        socket.emit("draw", newLine);
+        const payload = encode("DrawFinal", newLine);
+        if (payload) socket.emit("draw", payload);
         dispatch(updateCurrentLine([])); // Reset for next stroke
       }
     } else if (["square", "rectangle", "circle"].includes(selectedTool)) {
@@ -172,11 +197,21 @@ const useCanvasEvent = ({
           id: uuidv4(),
           tool: selectedTool,
           fill: currentFillColor,
+          type: selectedTool === "circle" ? "circle" : (selectedTool === "square" ? "square" : "rect"),
+          socketId: socket.id,
         };
         dispatch(drawShape(shapeWithTool));
-        socket.emit("drawShape", shapeWithTool);
+        const payload = encode("ShapeFinal", shapeWithTool);
+        if (payload) socket.emit("drawShape", payload);
         dispatch(clearCurrentShape());
         dispatch(resetFillColor());
+      }
+    } else if (selectedTool === "eraser") {
+      if (eraseBatchRef.current.length > 0) {
+        const radius = 20 / zoom;
+        const payload = encode("EraseBatch", { points: eraseBatchRef.current, radius });
+        if (payload) socket.emit("erase", payload);
+        eraseBatchRef.current = [];
       }
     }
   };

@@ -3,10 +3,17 @@ import {
   addText,
   clearCurrentShape,
   drawShape,
-  removeLineAt,
+  beginErase,
+  eraseAt,
+  eraseShape,
+  eraseText,
   setFillColor,
   setLiveLines,
   setLiveShapes,
+  appendLiveLinePoints,
+  removeLiveLine,
+  updateLiveShape,
+  removeLiveShape,
   syncState,
   updateCurrentLine,
   updateCurrentShape,
@@ -21,6 +28,7 @@ import {
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { clearCanvas, redoAction, undoAction } from "../store/drawingSlice";
+import { decode } from "@/proto/codec";
 
 /**
  *  Custom hook to handle all incoming socket events
@@ -35,35 +43,34 @@ export const useSocketListeners = (socket) => {
    * Handle finalized line drawing from another user.
    * @param {Object} line - The complete line object to be added.
    */
-  const handleDraw = (finalLine) => {
+  const handleDraw = (buffer) => {
+    const finalLine = decode("DrawFinal", buffer);
+    if (!finalLine) return;
     dispatch(addLine(finalLine));
-    dispatch(setLiveLines([]));
+    if (finalLine.socketId) {
+      dispatch(removeLiveLine(finalLine.socketId));
+    }
   };
 
-  /**
-   * Handle live line drawing updates from another user.
-   * @param {Array} updatedLine - The array of updated points during drawing
-   */
-  const handleLiveLine = (liveLine) => {
-    dispatch(setLiveLines([liveLine]));
+  const handleLiveLine = (buffer) => {
+    const liveLine = decode("DrawLive", buffer);
+    if (!liveLine || !liveLine.socketId) return;
+    dispatch(appendLiveLinePoints(liveLine));
   };
 
-  /**
-   * Handle finalized shape drawing from another user.
-   * @param {Object} shape - The shape object to be added to the canvas.
-   */
-  const handleShape = (finalShape) => {
+  const handleShape = (buffer) => {
+    const finalShape = decode("ShapeFinal", buffer);
+    if (!finalShape) return;
     dispatch(drawShape(finalShape));
-    dispatch(clearCurrentShape());
-    dispatch(setLiveShapes([]));
+    if (finalShape.socketId) {
+      dispatch(removeLiveShape(finalShape.socketId));
+    }
   };
 
-  /**
-   * Handle live shape transformation while it's being resized or drawn.
-   * @param {Object} updatedShape
-   */
-  const handleLiveShape = (liveShape) => {
-    dispatch(setLiveShapes([liveShape]));
+  const handleLiveShape = (buffer) => {
+    const liveShape = decode("ShapeLive", buffer);
+    if (!liveShape || !liveShape.socketId) return;
+    dispatch(updateLiveShape(liveShape));
   };
 
   /**
@@ -98,8 +105,16 @@ export const useSocketListeners = (socket) => {
    * Handle erasing lines based on coordinates from another user.
    * @param {Object} coords - x and y coordinates of the eraser tool.
    */
-  const handleErase = (coords) => {
-    dispatch(removeLineAt(coords));
+  const handleErase = (buffer) => {
+    const batch = decode("EraseBatch", buffer);
+    if (!batch || !batch.points) return;
+    
+    dispatch(beginErase());
+    for (const point of batch.points) {
+      dispatch(eraseAt({ x: point.x, y: point.y, radius: batch.radius }));
+      dispatch(eraseShape({ x: point.x, y: point.y, radius: batch.radius }));
+      dispatch(eraseText({ x: point.x, y: point.y, radius: batch.radius }));
+    }
   };
 
   /**

@@ -34,7 +34,7 @@ import { socket } from "@/lib/socket";
 import { useSocketListeners } from "@/hooks/useSocketListeners";
 import ColorPickerWrapper from "./ColorPickerWrapper";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { MoveLeft, MoveRight } from "lucide-react";
+import { MoveLeft, MoveRight, LogOut } from "lucide-react";
 import RightPanelTabs from "./RightPanelTabs";
 import InviteLink from "../room/InviteLink";
 
@@ -279,29 +279,53 @@ const Canvas = () => {
 
   return (
     <div className="flex flex-col md:flex-row h-full w-full bg-gray-300 dark:bg-gray-900 overflow-hidden relative">
-      <div className="absolute top-4 left-1/10 -translate-x-1/2 bg-white/90 dark:bg-gray-800/90 text-gray-800 dark:text-white px-6 py-3 rounded-lg shadow-lg z-50 backdrop-blur-md border border-gray-300 dark:border-gray-700 w-fit flex flex-col gap-2">
-        <InviteLink roomId={roomId} password={roomPassword} />
-
-        <div className="border-t border-gray-300 dark:border-gray-600 w-full" />
-      </div>
-
       {/* Side toolbox (vertical on desktop, slide-in on mobile) */}
-      <div className="hidden md:flex md:w-20 md:relative md:flex-col items-center justify-center left-6">
+      <div className="hidden md:flex md:w-20 md:relative md:flex-col items-center justify-center z-10 shrink-0 ml-4">
         <Toolbox onSelectTool={handleSelectTool} activeTool={selectedTool} />
       </div>
 
-      {/* Main content area containing toolbax and canvas */}
-      <div className="flex flex-col items-center flex-1 w-full px-4 md:px-6 py-4 md:py-6 overflow-auto">
-        {/* Toolbar with undo, redo, clear functionality */}
-        <div className="w-full max-w-4xl mb-4">
-          <Toolbar
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-            onClear={handleClear}
-            onDeleteSelected={handleDeleteSelected}
-            hasSelection={!!(selectedTextId || selectedShapeId)}
-            stageRef={stageRef}
-          />
+      {/* Main content area containing toolbox and canvas */}
+      <div className="flex flex-col flex-1 w-full px-4 md:px-6 py-4 md:py-6 overflow-hidden">
+        
+        {/* Header Row: Room Info + Toolbar */}
+        <div className="w-full flex flex-col xl:flex-row items-center justify-between gap-4 mb-4">
+          
+          {/* Room Info */}
+          <div className="bg-white/90 dark:bg-gray-800/90 text-gray-800 dark:text-white px-6 py-3 rounded-lg shadow-lg backdrop-blur-md border border-gray-300 dark:border-gray-700 w-full sm:w-fit shrink-0 z-20">
+            <div className="flex flex-wrap items-center justify-between sm:justify-start gap-4">
+              <InviteLink roomId={roomId} password={roomPassword} />
+              <button
+                onClick={() => {
+                  socket.disconnect();
+                  navigate("/join-room");
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-sm font-medium transition-all hover:scale-105 border border-red-500/20 whitespace-nowrap"
+                title="Leave Room"
+              >
+                <LogOut size={16} />
+                Leave
+              </button>
+            </div>
+          </div>
+
+          {/* Toolbar with undo, redo, clear functionality */}
+          <div className="w-full flex justify-center flex-1 xl:justify-center min-w-0">
+            <div className="w-full max-w-4xl">
+              <Toolbar
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                onClear={handleClear}
+                onDeleteSelected={handleDeleteSelected}
+                hasSelection={!!(selectedTextId || selectedShapeId)}
+                stageRef={stageRef}
+              />
+            </div>
+          </div>
+
+          {/* Zoom Controls */}
+          <div className="shrink-0">
+            <ZoomControls />
+          </div>
         </div>
 
         {/* Toolbox - Mobile (Horizontal below Toolbar) */}

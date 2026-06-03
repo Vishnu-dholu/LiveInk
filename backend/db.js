@@ -16,4 +16,9 @@ pool
   .then(() => console.log("Connected to PostgreSQL Database"))
   .catch((err) => console.error("Database Connection Error:", err));
 
+// Prevent Node.js from crashing if an idle database connection drops or times out
+pool.on("error", (err, client) => {
+  console.error("Unexpected error on idle PostgreSQL client", err);
+});
+
 export default pool;

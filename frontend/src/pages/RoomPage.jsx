@@ -94,7 +94,8 @@ const RoomPage = () => {
     };
   }, []);
 
-  const handleStartDrawing = () => navigate(`/room/${roomId}/draw`);
+  const handleStartDrawing = () =>
+    navigate(`/room/${roomId}/draw${password ? `?password=${password}` : ""}`);
 
   if (!joined) {
     return (

@@ -5,7 +5,6 @@ import { FaUndo, FaRedo, FaTrash } from "react-icons/fa";
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
-import ZoomControls from "./ZoomControls";
 import { useDispatch, useSelector } from "react-redux";
 import { deselectText, toggleGrid } from "@/store/drawingSlice";
 import { useTextDeselect } from "@/hooks/useTextDeselect";
@@ -109,9 +108,8 @@ const Toolbar = ({
         />
       </div>
 
-      <div className="absolute top-4 right-4">
-        <ZoomControls />
-      </div>
+
+
 
       <div className="flex items-center space-x-2 mt-2 sm:mt-0">
         <Label

@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package drawing;
+
+message DrawLive {
+  repeated float points = 1 [packed = true];  // Delta points only
+  string tool = 2;
+  string socketId = 3;
+}
+
+message DrawFinal {
+  repeated float points = 1 [packed = true];
+  string tool = 2;
+  string stroke = 3;
+  float strokeWidth = 4;
+  float opacity = 5;
+  repeated float dash = 6 [packed = true];
+  string socketId = 7;
+}
+
+message ShapeLive {
+  string type = 1;    // "rect", "circle", "square"
+  float x = 2;
+  float y = 3;
+  float width = 4;
+  float height = 5;
+  float radius = 6;
+  string socketId = 8;
+}
+
+message ShapeFinal {
+  string id = 1;
+  string tool = 2;
+  float x = 3;
+  float y = 4;
+  float width = 5;
+  float height = 6;
+  float radius = 7;
+  string fill = 8;
+  string type = 9;
+  string socketId = 10;
+}
+
+message ErasePoint {
+  float x = 1;
+  float y = 2;
+}
+
+message EraseBatch {
+  float radius = 2;
+
+  repeated ErasePoint points = 1;
+}
+
+message SyncState {
+  repeated DrawFinal lines = 1;
+  repeated ShapeFinal shapes = 2;
+  // text and other states will stay as JSON for simplicity
+}

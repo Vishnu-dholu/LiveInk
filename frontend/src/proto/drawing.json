@@ -1,0 +1,183 @@
+{
+  "nested": {
+    "drawing": {
+      "nested": {
+        "DrawLive": {
+          "fields": {
+            "points": {
+              "rule": "repeated",
+              "type": "float",
+              "id": 1,
+              "options": {
+                "packed": true
+              }
+            },
+            "tool": {
+              "type": "string",
+              "id": 2
+            },
+            "socketId": {
+              "type": "string",
+              "id": 3
+            }
+          }
+        },
+        "DrawFinal": {
+          "fields": {
+            "points": {
+              "rule": "repeated",
+              "type": "float",
+              "id": 1,
+              "options": {
+                "packed": true
+              }
+            },
+            "tool": {
+              "type": "string",
+              "id": 2
+            },
+            "stroke": {
+              "type": "string",
+              "id": 3
+            },
+            "strokeWidth": {
+              "type": "float",
+              "id": 4
+            },
+            "opacity": {
+              "type": "float",
+              "id": 5
+            },
+            "dash": {
+              "rule": "repeated",
+              "type": "float",
+              "id": 6,
+              "options": {
+                "packed": true
+              }
+            },
+            "socketId": {
+              "type": "string",
+              "id": 7
+            }
+          }
+        },
+        "ShapeLive": {
+          "fields": {
+            "type": {
+              "type": "string",
+              "id": 1
+            },
+            "x": {
+              "type": "float",
+              "id": 2
+            },
+            "y": {
+              "type": "float",
+              "id": 3
+            },
+            "width": {
+              "type": "float",
+              "id": 4
+            },
+            "height": {
+              "type": "float",
+              "id": 5
+            },
+            "radius": {
+              "type": "float",
+              "id": 6
+            },
+            "socketId": {
+              "type": "string",
+              "id": 8
+            }
+          }
+        },
+        "ShapeFinal": {
+          "fields": {
+            "id": {
+              "type": "string",
+              "id": 1
+            },
+            "tool": {
+              "type": "string",
+              "id": 2
+            },
+            "x": {
+              "type": "float",
+              "id": 3
+            },
+            "y": {
+              "type": "float",
+              "id": 4
+            },
+            "width": {
+              "type": "float",
+              "id": 5
+            },
+            "height": {
+              "type": "float",
+              "id": 6
+            },
+            "radius": {
+              "type": "float",
+              "id": 7
+            },
+            "fill": {
+              "type": "string",
+              "id": 8
+            },
+            "type": {
+              "type": "string",
+              "id": 9
+            },
+            "socketId": {
+              "type": "string",
+              "id": 10
+            }
+          }
+        },
+        "ErasePoint": {
+          "fields": {
+            "x": {
+              "type": "float",
+              "id": 1
+            },
+            "y": {
+              "type": "float",
+              "id": 2
+            }
+          }
+        },
+        "EraseBatch": {
+          "fields": {
+            "radius": {
+              "type": "float",
+              "id": 2
+            },
+            "points": {
+              "rule": "repeated",
+              "type": "ErasePoint",
+              "id": 1
+            }
+          }
+        },
+        "SyncState": {
+          "fields": {
+            "lines": {
+              "rule": "repeated",
+              "type": "DrawFinal",
+              "id": 1
+            },
+            "shapes": {
+              "rule": "repeated",
+              "type": "ShapeFinal",
+              "id": 2
+            }
+          }
+        }
+      }
+    }
+  }
+}

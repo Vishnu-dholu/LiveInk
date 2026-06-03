@@ -49,6 +49,21 @@ const drawingSlice = createSlice({
       state.liveLines = action.payload;
     },
 
+    appendLiveLinePoints: (state, action) => {
+      const { points, tool, socketId } = action.payload;
+      const lineIndex = state.liveLines.findIndex(l => l.socketId === socketId);
+      if (lineIndex === -1) {
+         state.liveLines.push({ points: [...points], tool, socketId });
+      } else {
+         state.liveLines[lineIndex].points.push(...points);
+      }
+    },
+
+    removeLiveLine: (state, action) => {
+       const socketId = action.payload;
+       state.liveLines = state.liveLines.filter(l => l.socketId !== socketId);
+    },
+
     // Adds a shape with a unique ID
     drawShape: (state, action) => {
       const shape = action.payload;
@@ -64,6 +79,21 @@ const drawingSlice = createSlice({
 
     setLiveShapes: (state, action) => {
       state.liveShapes = action.payload;
+    },
+
+    updateLiveShape: (state, action) => {
+      const liveShape = action.payload;
+      const index = state.liveShapes.findIndex(s => s.socketId === liveShape.socketId);
+      if (index === -1) {
+        state.liveShapes.push(liveShape);
+      } else {
+        state.liveShapes[index] = liveShape;
+      }
+    },
+
+    removeLiveShape: (state, action) => {
+       const socketId = action.payload;
+       state.liveShapes = state.liveShapes.filter(s => s.socketId !== socketId);
     },
 
     // Clears the currently drawn shape once finalized
@@ -107,32 +137,87 @@ const drawingSlice = createSlice({
       state.undoHistory.push(getSnapshot(state));
     },
 
-    // ----- LINE ERASER -----
-    // Removes a segment of a line near a specific (x, y) point
-    removeLineAt: (state, action) => {
-      const { x, y } = action.payload;
-      const threshold = 10; // Eraser sensitivity
+    // ----- ERASER OVERHAUL -----
+    beginErase: (state) => {
+      // Push a single undo snapshot at the start of an erase stroke
       state.undoHistory.push(getSnapshot(state));
+      state.redoHistory = [];
+    },
 
-      state.lines = state.lines
-        .map((line) => {
-          const newPoints = [];
-          for (let i = 0; i < line.points.length; i += 2) {
-            const lineX = line.points[i];
-            const lineY = line.points[i + 1];
-
-            // Only keep points that are not close to the erase point
-            if (
-              Math.abs(lineX - x) >= threshold ||
-              Math.abs(lineY - y) >= threshold
-            ) {
-              newPoints.push(lineX, lineY);
+    eraseAt: (state, action) => {
+      const { x, y, radius } = action.payload;
+      const rSq = radius * radius;
+      
+      const newLines = [];
+      
+      for (const line of state.lines) {
+        let currentSubLine = [];
+        
+        for (let i = 0; i < line.points.length; i += 2) {
+          const px = line.points[i];
+          const py = line.points[i + 1];
+          const dx = px - x;
+          const dy = py - y;
+          const distSq = dx * dx + dy * dy;
+          
+          if (distSq < rSq) {
+            // Point is inside eraser -> break the line
+            if (currentSubLine.length > 2) {
+              newLines.push({ ...line, points: currentSubLine });
             }
+            currentSubLine = []; // Start a new segment
+          } else {
+            // Point is outside eraser
+            currentSubLine.push(px, py);
           }
-          // Return updated line only if it still has more than one point
-          return newPoints.length > 2 ? { ...line, points: newPoints } : null;
-        })
-        .filter(Boolean); //  Remove null entries
+        }
+        
+        // Add the last remaining segment if it's valid
+        if (currentSubLine.length > 2) {
+          newLines.push({ ...line, points: currentSubLine });
+        }
+      }
+      
+      state.lines = newLines;
+    },
+
+    eraseShape: (state, action) => {
+      const { x, y, radius } = action.payload;
+      const rSq = radius * radius;
+      
+      state.shapes = state.shapes.filter(shape => {
+        let centerX = shape.x;
+        let centerY = shape.y;
+        if (shape.type !== "circle") {
+            centerX += (shape.width || 0) / 2;
+            centerY += (shape.height || 0) / 2;
+        }
+        
+        // Approximate collision using center point
+        const dx = centerX - x;
+        const dy = centerY - y;
+        return (dx * dx + dy * dy) > rSq; // Keep if outside
+      });
+      // Clear selection if the selected shape was erased
+      if (state.selectedShapeId && !state.shapes.find(s => s.id === state.selectedShapeId)) {
+        state.selectedShapeId = null;
+      }
+    },
+
+    eraseText: (state, action) => {
+       const { x, y, radius } = action.payload;
+       const rSq = radius * radius;
+       
+       state.texts = state.texts.filter(text => {
+           // Approximate text collision using origin point
+           const dx = text.x - x;
+           const dy = text.y - y;
+           return (dx * dx + dy * dy) > rSq;
+       });
+       // Clear selection if the selected text was erased
+       if (state.selectedTextId && !state.texts.find(t => t.id === state.selectedTextId)) {
+         state.selectedTextId = null;
+       }
     },
 
     // ----- TEXT LOGIC -----
@@ -404,7 +489,10 @@ export const {
   redoAction,
   clearCanvas,
   syncState,
-  removeLineAt,
+  beginErase,
+  eraseAt,
+  eraseShape,
+  eraseText,
   updateCurrentLine,
   addText,
   setSelectedTextId,
@@ -435,6 +523,10 @@ export const {
   updateUsers,
   clearRoom,
   updateCreatedBy,
+  appendLiveLinePoints,
+  removeLiveLine,
+  updateLiveShape,
+  removeLiveShape,
 } = drawingSlice.actions;
 
 export default drawingSlice.reducer;
