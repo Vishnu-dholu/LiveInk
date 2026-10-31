@@ -6,6 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import { loginUser, BACKEND_URL } from "@/api/auth";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -35,40 +36,24 @@ const LoginPage = () => {
     setErrorMessage("");
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}/api/auth/login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password, rememberMe }),
-        },
-      );
+      const data = await loginUser({ email, password, rememberMe });
+      const userToStore = {
+        userId: data.user.id,
+        username: data.user.username,
+        email: data.user.email,
+      };
 
-      const data = await response.json();
-
-      if (response.ok) {
-        const userToStore = {
-          userId: data.user.id,
-          username: data.user.username,
-          email: data.user.email,
-        };
-
-        if (rememberMe) {
-          localStorage.setItem("user", JSON.stringify(userToStore));
-          localStorage.setItem("token", data.token);
-        } else {
-          sessionStorage.setItem("user", JSON.stringify(userToStore));
-          sessionStorage.setItem("token", data.token);
-        }
-        navigate("/create-room");
+      if (rememberMe) {
+        localStorage.setItem("user", JSON.stringify(userToStore));
+        localStorage.setItem("token", data.token);
       } else {
-        setErrorMessage(data.error || "Login failed");
+        sessionStorage.setItem("user", JSON.stringify(userToStore));
+        sessionStorage.setItem("token", data.token);
       }
+      navigate("/create-room");
     } catch (err) {
       console.error(err);
-      setErrorMessage("Something went wrong. Please try again.");
+      setErrorMessage(err.message || "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -168,9 +153,7 @@ const LoginPage = () => {
           </Button>
         </form>
         <div className="flex flex-col gap-3 mt-6">
-          <a
-            href={`${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}/auth/google`}
-          >
+          <a href={`${BACKEND_URL}/auth/google`}>
             <Button
               variant="outline"
               className="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-100 text-gray-900 font-semibold hover:bg-gray-200 transition"
@@ -180,9 +163,7 @@ const LoginPage = () => {
             </Button>
           </a>
 
-          <a
-            href={`${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}/auth/github`}
-          >
+          <a href={`${BACKEND_URL}/auth/github`}>
             <Button
               variant="outline"
               className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white font-semibold hover:bg-gray-800 transition"

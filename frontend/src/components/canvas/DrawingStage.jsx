@@ -1,4 +1,4 @@
-// Import Konva components
+import { useState, useEffect } from "react";
 import { Stage, Layer, Rect } from "react-konva";
 
 // Renderers for different types of drawable elements
@@ -26,6 +26,23 @@ const DrawingStage = ({
 }) => {
   const dispatch = useDispatch();
 
+  const [dimensions, setDimensions] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   // Hook to manage double-click text editing functionality
   const {
     handleAddText,
@@ -42,10 +59,8 @@ const DrawingStage = ({
   const showGrid = useSelector((state) => state.drawing.showGrid);
   const stageX = useSelector((state) => state.drawing.stageX);
   const stageY = useSelector((state) => state.drawing.stageY);
-  // const isInteracting = useSelector((state) => state.drawing.isInteracting);
 
-  const width = window.innerWidth;
-  const height = window.innerHeight;
+  const { width, height } = dimensions;
 
   const isPanning = selectedTool === "select";
 

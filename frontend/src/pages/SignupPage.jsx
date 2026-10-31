@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
+import { registerUser, BACKEND_URL } from "@/api/auth";
 
 const SignupPage = () => {
   const [username, setUsername] = useState("");
@@ -32,34 +33,21 @@ const SignupPage = () => {
     setErrorMessage("");
 
     try {
-      const BACKEND = import.meta.env.VITE_BACKEND_URL || "http://localhost:5001";
-      const response = await fetch(`${BACKEND}/api/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, email, password }),
-      });
-
-      const data = await response.json();
+      const data = await registerUser({ username, email, password });
       console.log("Registered user:", data.user);
 
-      if (response.ok) {
-        const userToStore = {
-          userId: data.user.id,
-          username: data.user.username,
-          email: data.user.email,
-        };
+      const userToStore = {
+        userId: data.user.id,
+        username: data.user.username,
+        email: data.user.email,
+      };
 
-        localStorage.setItem("user", JSON.stringify(userToStore));
-        localStorage.setItem("token", data.token);
-        navigate("/create-room");
-      } else {
-        setErrorMessage(data.error || "Signup failed");
-      }
+      localStorage.setItem("user", JSON.stringify(userToStore));
+      localStorage.setItem("token", data.token);
+      navigate("/create-room");
     } catch (err) {
       console.error(err);
-      setErrorMessage("Something went wrong. Please try again.");
+      setErrorMessage(err.message || "Something went wrong. Please try again.");
     }
   };
   return (
@@ -149,7 +137,7 @@ const SignupPage = () => {
           </Button>
         </form>
         <div className="flex flex-col gap-3 mt-6">
-          <a href={`${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}/auth/google`}>
+          <a href={`${BACKEND_URL}/auth/google`}>
             <Button
               variant="outline"
               className="w-full flex items-center justify-center gap-2 bg-white dark:bg-gray-100 text-gray-900 font-semibold hover:bg-gray-200 transition"
@@ -159,7 +147,7 @@ const SignupPage = () => {
             </Button>
           </a>
 
-          <a href={`${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}/auth/github`}>
+          <a href={`${BACKEND_URL}/auth/github`}>
             <Button
               variant="outline"
               className="w-full flex items-center justify-center gap-2 bg-gray-900 text-white font-semibold hover:bg-gray-800 transition"

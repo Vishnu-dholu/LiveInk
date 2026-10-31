@@ -13,8 +13,8 @@ RUN npm install
 # Copy all backend files into the container
 COPY . .
 
-# Expose port 5000 for API and WebSocket communication
-EXPOSE 5050
+# Expose port 5001 for API and WebSocket communication
+EXPOSE 5001
 
 # Start the backend server
 CMD ["node", "server.js"]

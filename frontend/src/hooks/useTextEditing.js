@@ -159,16 +159,11 @@ const useTextEditing = (stageRef, socket) => {
         if (newValue && newValue !== textObj.text) {
           // Text was changed — update it
           dispatch(updateTextContent({ id: textObj.id, text: newValue }));
-          socket.emit("text:update", { id: textObj.id, text: newValue });
         } else if (!newValue && isNewText) {
           // Empty text on a brand new node — update with placeholder
           dispatch(
             updateTextContent({ id: textObj.id, text: "Type here..." }),
           );
-          socket.emit("text:update", {
-            id: textObj.id,
-            text: "Type here...",
-          });
         }
         // If text is unchanged (editing existing text without changes), do nothing
 
@@ -220,7 +215,6 @@ const useTextEditing = (stageRef, socket) => {
 
         // Add to Redux immediately — text is now in texts[]
         dispatch(addText(newText));
-        socket.emit("text:start", newText);
 
         // Open editor after Konva has a chance to render the node
         setTimeout(() => {
@@ -254,11 +248,6 @@ const useTextEditing = (stageRef, socket) => {
           y: updatedText.y,
         }),
       );
-      socket.emit("text:update", {
-        id: updatedText.id,
-        x: updatedText.x,
-        y: updatedText.y,
-      });
     },
     [dispatch, socket],
   );

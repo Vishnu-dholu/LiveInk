@@ -35,7 +35,7 @@ const drawingSlice = createSlice({
     // ----- LINE & SHAPE LOGIC -----
     // Adds a new line to the canvas
     addLine: (state, action) => {
-      state.undoHistory.push(getSnapshot(state)); // Save current state for undo
+      pushUndo(state); // Save current state for undo
       state.lines.push(action.payload); // Add new line
       state.redoHistory = []; // Clear redo stack after new action
     },
@@ -67,7 +67,7 @@ const drawingSlice = createSlice({
     // Adds a shape with a unique ID
     drawShape: (state, action) => {
       const shape = action.payload;
-      state.undoHistory.push(getSnapshot(state));
+      pushUndo(state);
       state.shapes.push(shape);
       state.redoHistory = [];
     },
@@ -115,14 +115,14 @@ const drawingSlice = createSlice({
     redoAction: (state) => {
       if (state.redoHistory.length > 0) {
         const redoState = state.redoHistory.pop(); //  Get next state
-        state.undoHistory.push(getSnapshot(state)); //  Save current for undo
+        pushUndo(state); //  Save current for undo
         restoreSnapshot(state, redoState); //  Restore redo state
       }
     },
 
     // Clears the canvas and saves the current snapshot to undoHistory
     clearCanvas: (state) => {
-      state.undoHistory.push(getSnapshot(state)); // Save before clearing
+      pushUndo(state); // Save before clearing
       state.redoHistory = []; // Clear redo stack
       state.lines = [];
       state.shapes = [];
@@ -134,58 +134,116 @@ const drawingSlice = createSlice({
       state.lines = action.payload.lines || [];
       state.shapes = action.payload.shapes || [];
       state.texts = action.payload.texts || [];
-      state.undoHistory.push(getSnapshot(state));
+      state.undoHistory = [];
+      state.redoHistory = [];
+    },
+
+    // Applies deltas (add / update / remove / clear by id) received from other users.
+    // Not recorded in this user's undo history.
+    applyRemoteOps: (state, action) => {
+      for (const op of action.payload || []) {
+        if (op.op === "clear") {
+          state.lines = [];
+          state.shapes = [];
+          state.texts = [];
+          continue;
+        }
+
+        const key = REMOTE_KEYS[op.kind];
+        if (!key) continue;
+
+        if (op.op === "add") {
+          if (state[key].some((i) => i.id === op.item.id)) continue;
+          state[key].push(op.item);
+          // The finished stroke/shape replaces that user's live preview
+          if (op.item.socketId) {
+            if (op.kind === "line") {
+              state.liveLines = state.liveLines.filter((l) => l.socketId !== op.item.socketId);
+            } else if (op.kind === "shape") {
+              state.liveShapes = state.liveShapes.filter((s) => s.socketId !== op.item.socketId);
+            }
+          }
+        } else if (op.op === "update") {
+          const target = state[key].find((i) => i.id === op.id);
+          if (target) Object.assign(target, op.patch);
+        } else if (op.op === "remove") {
+          state[key] = state[key].filter((i) => i.id !== op.id);
+        }
+      }
+
+      if (state.selectedShapeId && !state.shapes.some((s) => s.id === state.selectedShapeId)) {
+        state.selectedShapeId = null;
+      }
+      if (state.selectedTextId && !state.texts.some((t) => t.id === state.selectedTextId)) {
+        state.selectedTextId = null;
+      }
     },
 
     // ----- ERASER OVERHAUL -----
     beginErase: (state) => {
       // Push a single undo snapshot at the start of an erase stroke
-      state.undoHistory.push(getSnapshot(state));
+      pushUndo(state);
       state.redoHistory = [];
     },
 
     eraseAt: (state, action) => {
       const { x, y, radius } = action.payload;
       const rSq = radius * radius;
-      
+      const inside = (px, py) => (px - x) * (px - x) + (py - y) * (py - y) < rSq;
+
       const newLines = [];
-      
+      let changed = false;
+
       for (const line of state.lines) {
-        let currentSubLine = [];
-        
-        for (let i = 0; i < line.points.length; i += 2) {
-          const px = line.points[i];
-          const py = line.points[i + 1];
-          const dx = px - x;
-          const dy = py - y;
-          const distSq = dx * dx + dy * dy;
-          
-          if (distSq < rSq) {
-            // Point is inside eraser -> break the line
-            if (currentSubLine.length > 2) {
-              newLines.push({ ...line, points: currentSubLine });
-            }
-            currentSubLine = []; // Start a new segment
-          } else {
-            // Point is outside eraser
-            currentSubLine.push(px, py);
+        const pts = line.points;
+
+        let touched = false;
+        for (let i = 0; i < pts.length; i += 2) {
+          if (inside(pts[i], pts[i + 1])) {
+            touched = true;
+            break;
           }
         }
-        
-        // Add the last remaining segment if it's valid
-        if (currentSubLine.length > 2) {
-          newLines.push({ ...line, points: currentSubLine });
+        if (!touched) {
+          newLines.push(line); // untouched lines keep their identity
+          continue;
         }
+
+        changed = true;
+        // Split the line around the erased points. The first surviving segment keeps
+        // the line's id; later segments get an id derived from the parent and their
+        // start index, so every client derives the same ids.
+        let segment = [];
+        let segmentStart = 0;
+        let keptOriginalId = false;
+        const flush = () => {
+          if (segment.length > 2) {
+            const id = keptOriginalId ? `${line.id}~${segmentStart}` : line.id;
+            keptOriginalId = true;
+            newLines.push({ ...line, id, points: segment });
+          }
+          segment = [];
+        };
+
+        for (let i = 0; i < pts.length; i += 2) {
+          if (inside(pts[i], pts[i + 1])) {
+            flush();
+          } else {
+            if (segment.length === 0) segmentStart = i;
+            segment.push(pts[i], pts[i + 1]);
+          }
+        }
+        flush();
       }
-      
-      state.lines = newLines;
+
+      if (changed) state.lines = newLines;
     },
 
     eraseShape: (state, action) => {
       const { x, y, radius } = action.payload;
       const rSq = radius * radius;
       
-      state.shapes = state.shapes.filter(shape => {
+      const keptShapes = state.shapes.filter(shape => {
         let centerX = shape.x;
         let centerY = shape.y;
         if (shape.type !== "circle") {
@@ -198,6 +256,8 @@ const drawingSlice = createSlice({
         const dy = centerY - y;
         return (dx * dx + dy * dy) > rSq; // Keep if outside
       });
+      if (keptShapes.length === state.shapes.length) return;
+      state.shapes = keptShapes;
       // Clear selection if the selected shape was erased
       if (state.selectedShapeId && !state.shapes.find(s => s.id === state.selectedShapeId)) {
         state.selectedShapeId = null;
@@ -208,12 +268,14 @@ const drawingSlice = createSlice({
        const { x, y, radius } = action.payload;
        const rSq = radius * radius;
        
-       state.texts = state.texts.filter(text => {
+       const keptTexts = state.texts.filter(text => {
            // Approximate text collision using origin point
            const dx = text.x - x;
            const dy = text.y - y;
            return (dx * dx + dy * dy) > rSq;
        });
+       if (keptTexts.length === state.texts.length) return;
+       state.texts = keptTexts;
        // Clear selection if the selected text was erased
        if (state.selectedTextId && !state.texts.find(t => t.id === state.selectedTextId)) {
          state.selectedTextId = null;
@@ -225,7 +287,7 @@ const drawingSlice = createSlice({
     addText: (state, action) => {
       const text = action.payload;
 
-      state.undoHistory.push(getSnapshot(state));
+      pushUndo(state);
       state.texts.push(text);
       state.redoHistory = [];
     },
@@ -236,11 +298,12 @@ const drawingSlice = createSlice({
 
     // Updates the content of a specific text element
     updateTextContent: (state, action) => {
-      state.undoHistory.push(getSnapshot(state));
       const { id, ...updates } = action.payload;
       const target = state.texts.find((t) => t.id === id);
       if (target) {
+        pushUndo(state);
         Object.assign(target, updates);
+        state.redoHistory = [];
       }
     },
 
@@ -248,7 +311,7 @@ const drawingSlice = createSlice({
       const { id, fontStyle } = action.payload;
       const text = state.texts.find((t) => t.id === id);
       if (text) {
-        state.undoHistory.push(getSnapshot(state));
+        pushUndo(state);
         text.fontStyle = fontStyle;
         state.redoHistory = [];
       }
@@ -258,7 +321,7 @@ const drawingSlice = createSlice({
       const { id, fontFamily } = action.payload;
       const text = state.texts.find((t) => t.id === id);
       if (text) {
-        state.undoHistory.push(getSnapshot(state));
+        pushUndo(state);
         text.fontFamily = fontFamily;
         state.redoHistory = [];
       }
@@ -268,7 +331,7 @@ const drawingSlice = createSlice({
       const { id, fontSize } = action.payload;
       const text = state.texts.find((t) => t.id === id);
       if (text) {
-        state.undoHistory.push(getSnapshot(state));
+        pushUndo(state);
         text.fontSize = fontSize;
         state.redoHistory = [];
       }
@@ -276,7 +339,7 @@ const drawingSlice = createSlice({
 
     deleteText: (state, action) => {
       const id = action.payload;
-      state.undoHistory.push(getSnapshot(state));
+      pushUndo(state);
       state.texts = state.texts.filter((t) => t.id !== id);
       if (state.selectedTextId === id) state.selectedTextId = null;
       state.redoHistory = [];
@@ -284,7 +347,7 @@ const drawingSlice = createSlice({
 
     deleteShape: (state, action) => {
       const id = action.payload;
-      state.undoHistory.push(getSnapshot(state));
+      pushUndo(state);
       state.shapes = state.shapes.filter((s) => s.id !== id);
       if (state.selectedShapeId === id) state.selectedShapeId = null;
       state.redoHistory = [];
@@ -314,7 +377,7 @@ const drawingSlice = createSlice({
       if (line) {
         const oldPoints = [...line.points];
         const newPoints = [];
-        state.undoHistory.push(getSnapshot(state));
+        pushUndo(state);
         for (let i = 0; i < oldPoints.length; i += 2) {
           newPoints.push(oldPoints[i] + x, oldPoints[i + 1] + y);
         }
@@ -327,7 +390,7 @@ const drawingSlice = createSlice({
     updateShapePosition: (state, action) => {
       const { index, x, y } = action.payload;
       if (state.shapes[index]) {
-        state.undoHistory.push(getSnapshot(state));
+        pushUndo(state);
         state.shapes[index].x = x;
         state.shapes[index].y = y;
         state.redoHistory = [];
@@ -339,7 +402,7 @@ const drawingSlice = createSlice({
       const { id, x, y } = action.payload;
       const text = state.texts.find((t) => t.id === id);
       if (text) {
-        state.undoHistory.push(getSnapshot(state));
+        pushUndo(state);
         text.x = x;
         text.y = y;
         state.redoHistory = [];
@@ -357,7 +420,7 @@ const drawingSlice = createSlice({
       const { id, updatedShape } = action.payload;
       const index = state.shapes.findIndex((shape) => shape.id === id);
       if (index === -1) return;
-      state.undoHistory.push(getSnapshot(state));
+      pushUndo(state);
       state.shapes[index] = { ...state.shapes[index], ...updatedShape };
       state.redoHistory = [];
     },
@@ -375,7 +438,7 @@ const drawingSlice = createSlice({
       const { id, fill } = action.payload;
       const shape = state.shapes.find((s) => s.id === id);
       if (shape) {
-        state.undoHistory.push(getSnapshot(state));
+        pushUndo(state);
         shape.fill = fill;
         state.redoHistory = [];
       }
@@ -385,7 +448,7 @@ const drawingSlice = createSlice({
       const { id, fill } = action.payload;
       const text = state.texts.find((t) => t.id === id);
       if (text) {
-        state.undoHistory.push(getSnapshot(state));
+        pushUndo(state);
         text.fill = String(fill);
         state.redoHistory = [];
       }
@@ -432,28 +495,16 @@ const drawingSlice = createSlice({
   },
 });
 
-export const updateTextFontStyleAndEmit =
-  ({ id, fontStyle }) =>
-  (dispatch, _, { socket }) => {
-    dispatch(updateTextFontStyle({ id, fontStyle }));
-    socket.emit("text:updateFontStyle", { id, fontStyle });
-  };
-
-export const updateTextFontFamilyAndEmit =
-  ({ id, fontFamily }) =>
-  (dispatch, getState, { socket }) => {
-    dispatch(updateTextFontFamily({ id, fontFamily }));
-    socket.emit("text:updateFontFamily", { id, fontFamily });
-  };
-
-export const updateTextFontSizeAndEmit =
-  ({ id, fontSize }) =>
-  (dispatch, _, { socket }) => {
-    dispatch(updateTextFontSize({ id, fontSize }));
-    socket.emit("text:updateFontSize", { id, fontSize });
-  };
-
 // ------- SNAPSHOT HELPERS -------
+
+const MAX_UNDO_STEPS = 50;
+const REMOTE_KEYS = { line: "lines", shape: "shapes", text: "texts" };
+
+// Saves the current drawable state for undo, keeping the history bounded
+function pushUndo(state) {
+  state.undoHistory.push(getSnapshot(state));
+  if (state.undoHistory.length > MAX_UNDO_STEPS) state.undoHistory.shift();
+}
 
 // Creates a shallow copy of drawable elements for undo/redo
 function getSnapshot(state) {
@@ -489,6 +540,7 @@ export const {
   redoAction,
   clearCanvas,
   syncState,
+  applyRemoteOps,
   beginErase,
   eraseAt,
   eraseShape,

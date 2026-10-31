@@ -1,7 +1,6 @@
 import { useSelector, useDispatch } from "react-redux";
 import { updateTextFontSize } from "@/store/drawingSlice";
 import { Label } from "@/components/ui/label";
-import { socket } from "@/lib/socket";
 
 const FontSizeControl = () => {
   const dispatch = useDispatch();
@@ -18,14 +17,7 @@ const FontSizeControl = () => {
   const handleFontSizeChange = (e) => {
     const fontSize = parseInt(e.target.value, 10);
     if (fontSize >= 2 && fontSize <= 400) {
-      const payload = {
-        id: selectedTextId,
-        fontSize,
-      };
-
-      dispatch(updateTextFontSize(payload));
-
-      socket.emit("text:updateFontSize", payload);
+      dispatch(updateTextFontSize({ id: selectedTextId, fontSize }));
     }
   };
 

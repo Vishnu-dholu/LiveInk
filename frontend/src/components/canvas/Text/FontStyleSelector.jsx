@@ -1,7 +1,7 @@
 import { Label } from "@/components/ui/label";
 import {
-  updateTextFontStyleAndEmit,
-  updateTextFontFamilyAndEmit,
+  updateTextFontStyle,
+  updateTextFontFamily,
 } from "@/store/drawingSlice";
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -16,7 +16,7 @@ const FontStyleSelector = () => {
 
   const handleFontChange = (e) => {
     dispatch(
-      updateTextFontFamilyAndEmit({
+      updateTextFontFamily({
         id: selectedTextId,
         fontFamily: e.target.value,
       })
@@ -25,7 +25,7 @@ const FontStyleSelector = () => {
 
   const handleWeightChange = (e) => {
     dispatch(
-      updateTextFontStyleAndEmit({
+      updateTextFontStyle({
         id: selectedTextId,
         fontStyle: e.target.value,
       })

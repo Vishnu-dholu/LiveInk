@@ -1,40 +1,46 @@
 import { useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { exchangeOAuthCode, getMe } from "@/api/auth";
 
 const OAuthSuccess = () => {
   const [params] = useSearchParams();
-  const token = params.get("token");
+  const code = params.get("code");
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (token) {
-      localStorage.setItem("token", token);
-
-      // Fetch user data
-      fetch(
-        `${import.meta.env.VITE_BACKEND_URL || "http://localhost:5001"}/api/auth/me`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      )
-        .then((res) => res.json())
-        .then((user) => {
-          localStorage.setItem(
-            "user",
-            JSON.stringify({
-              userId: user.id,
-              username: user.username,
-              email: user.email,
-            }),
-          );
-          navigate("/canvas");
-        })
-        .catch((err) => {
-          console.error("Failed to fetch user after OAuth", err);
-          navigate("/login");
-        });
+    if (!code) {
+      navigate("/login", { replace: true });
+      return;
     }
-  }, [token, navigate]);
+
+    let cancelled = false;
+
+    exchangeOAuthCode(code)
+      .then(async (token) => {
+        const user = await getMe(token);
+        if (cancelled) return;
+
+        localStorage.setItem("token", token);
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            userId: user.id,
+            username: user.username,
+            email: user.email,
+          }),
+        );
+        navigate("/", { replace: true });
+      })
+      .catch((err) => {
+        console.error("OAuth login failed", err);
+        if (!cancelled) navigate("/login", { replace: true });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [code, navigate]);
+
   return <div>Logging you in...</div>;
 };
 

@@ -25,14 +25,8 @@ const RightPanelTabs = ({ selectedTool, initialHistory = [] }) => {
   }, [roomId]);
 
   const handleSendMessage = (text) => {
-    const me = JSON.parse(localStorage.getItem("user"));
-    const newMessage = {
-      username: me.username,
-      text,
-      timestamp: Date.now(),
-    };
-
-    socket.emit("room:message", { roomId, message: newMessage });
+    // The server sets the author and timestamp
+    socket.emit("room:message", { roomId, message: { text } });
   };
 
   const renderTabContent = () => {

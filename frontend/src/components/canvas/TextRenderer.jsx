@@ -6,7 +6,6 @@ import {
 } from "@/store/drawingSlice";
 import { Text } from "react-konva";
 import { useDispatch, useSelector } from "react-redux";
-import { socket } from "@/lib/socket";
 
 /**
  * TextRenderer handles rendering of all text elements on the canvas.
@@ -48,7 +47,6 @@ const TextRenderer = ({ isEditingText, editTextProps, onEdit }) => {
     if (selectedTool === "paint") {
       // Direct click-to-fill (same pattern as ShapeRenderer)
       dispatch(updateTextFill({ id: t.id, fill: currentFillColor }));
-      socket.emit("text:fill", { id: t.id, fill: currentFillColor });
       dispatch(resetFillColor());
     } else {
       dispatch(setSelectedTextId(t.id));

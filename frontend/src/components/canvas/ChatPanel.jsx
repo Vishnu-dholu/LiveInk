@@ -1,13 +1,12 @@
 import { SendHorizonal } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
-import { socket } from "@/lib/socket";
+import { getStoredUser } from "@/lib/getStoredUser";
 
 const ChatPanel = ({ messages, onSendMessage }) => {
   const [message, setMessage] = useState("");
   const messagesEndRef = useRef(null);
 
-  const me = JSON.parse(localStorage.getItem("user") || "{}");
+  const me = getStoredUser() || {};
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

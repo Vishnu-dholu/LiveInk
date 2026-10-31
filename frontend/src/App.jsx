@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import CanvasPage from "./pages/CanvasPage";
 import LoginPage from "./pages/LoginPage";
@@ -56,7 +56,8 @@ const App = () => {
           </ProtectedRoute>
         }
       />
-      <Route path="/canvas" element={<CanvasPage />} />
+      {/* Canvases only exist inside a room */}
+      <Route path="/canvas" element={<Navigate to="/create-room" replace />} />
     </Routes>
   );
 };

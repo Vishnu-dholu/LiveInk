@@ -1,7 +1,6 @@
 // Importing React hooks and necessary functions
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { shallowEqual } from "react-redux";
+import { useDispatch, useSelector, shallowEqual } from "react-redux";
 
 // UI components
 import Toolbar from "./Toolbar"; //  Top-bar with undo, redo, clear
@@ -14,8 +13,6 @@ import {
   undoAction,
   redoAction,
   clearCanvas,
-  updateCurrentLine,
-  updateCurrentShape,
   deleteText,
   deleteShape,
   setStagePosition,
@@ -24,10 +21,8 @@ import {
   setRoomInfo,
   updateUsers,
   updateCreatedBy,
+  syncState,
 } from "@/store/drawingSlice";
-
-import { store } from "@/store/store";
-import { syncState } from "@/store/drawingSlice";
 
 // Socket instance for real-time collaboration
 import { socket } from "@/lib/socket";
@@ -37,6 +32,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { MoveLeft, MoveRight, LogOut } from "lucide-react";
 import RightPanelTabs from "./RightPanelTabs";
 import InviteLink from "../room/InviteLink";
+import { getStoredUser } from "@/lib/getStoredUser";
 
 // Constants for large virtual canvas
 const virtualCanvasWidth = 10000;
@@ -79,45 +75,49 @@ const Canvas = () => {
 
   useSocketListeners(socket);
 
-  const stored = localStorage.getItem("user") || sessionStorage.getItem("user");
-  const me = stored ? JSON.parse(stored) : {};
+  const me = getStoredUser() || {};
 
   // 1) on-mount & on socket "connect" -> re-join the room
   useEffect(() => {
-    socket.connect();
-
     if (!roomId || !me.userId) {
       navigate("/join-room");
       return;
     }
 
-    socket.emit(
-      "room:join",
-      {
-        roomId,
-        userId: me.userId,
-        username: me.username,
-        password: roomPassword,
-      },
-      (resp) => {
+    // Runs on the first connect and again after every reconnect, because the
+    // server forgets room membership when a connection drops.
+    const join = () => {
+      socket.emit("room:join", { roomId, password: roomPassword }, (resp) => {
         if (!resp.success) {
           console.error("join failed", resp.message);
           navigate("/join-room");
           return;
         }
-        // this is the big one:
         setChatHistory(resp.history || []);
-        // also update users / createdBy if you like
         dispatch(
           setRoomInfo({ roomId, createdBy: resp.createdBy, users: resp.users }),
         );
 
+        // Full canvas snapshot from the server; later changes arrive as deltas
         if (resp.canvasState) {
           dispatch(syncState(resp.canvasState));
         }
-      },
-    );
-  }, [roomId, me.userId, me.username, roomPassword]);
+      });
+    };
+
+    socket.on("connect", join);
+    if (socket.connected) {
+      join();
+    } else {
+      socket.connect();
+    }
+
+    return () => {
+      socket.off("connect", join);
+      socket.emit("leave-room", { roomId });
+      socket.disconnect();
+    };
+  }, [roomId, me.userId, roomPassword]);
 
   // 2) subscribe to live member updates
   useEffect(() => {
@@ -169,38 +169,16 @@ const Canvas = () => {
   // Undo action and emit to other users via socket
   const handleUndo = useCallback(() => {
     dispatch(undoAction());
-
-    setTimeout(() => {
-      const state = store.getState().drawing;
-      socket.emit("sync:state", {
-        lines: state.lines,
-        shapes: state.shapes,
-        texts: state.texts,
-      });
-    }, 0);
   }, [dispatch]);
 
   // Redo action and emit to other users via socket
   const handleRedo = useCallback(() => {
     dispatch(redoAction());
-
-    setTimeout(() => {
-      const state = store.getState().drawing;
-      socket.emit("sync:state", {
-        lines: state.lines,
-        shapes: state.shapes,
-        texts: state.texts,
-      });
-    }, 0);
   }, [dispatch]);
 
   // Clear canvas and emit to other users
   const handleClear = useCallback(() => {
     dispatch(clearCanvas());
-
-    setTimeout(() => {
-      socket.emit("sync:state", { lines: [], shapes: [], texts: [] });
-    }, 0);
   }, [dispatch]);
 
   // Delete selected item and emit to other users via socket
@@ -209,35 +187,35 @@ const Canvas = () => {
       dispatch(deleteText(selectedTextId));
     } else if (selectedShapeId) {
       dispatch(deleteShape(selectedShapeId));
-    } else {
-      return;
     }
-
-    setTimeout(() => {
-      const state = store.getState().drawing;
-      socket.emit("sync:state", {
-        lines: state.lines,
-        shapes: state.shapes,
-        texts: state.texts,
-      });
-    }, 0);
   }, [dispatch, selectedTextId, selectedShapeId]);
 
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.ctrlKey && e.key === "z") {
-        handleUndo();
-      } else if (e.ctrlKey && e.shiftKey && e.key === "Z") {
+      // Don't hijack shortcuts while typing in chat, settings or the text editor
+      const target = e.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+      ) {
+        return;
+      }
+
+      const mod = e.ctrlKey || e.metaKey;
+      const key = e.key.toLowerCase();
+
+      if (mod && key === "z") {
+        e.preventDefault();
+        if (e.shiftKey) handleRedo();
+        else handleUndo();
+      } else if (mod && key === "y") {
+        e.preventDefault();
         handleRedo();
       } else if (e.key === "Delete") {
-        if (selectedTextId || selectedShapeId) {
-          handleDeleteSelected();
-        } else {
-          // Fallback: if nothing is selected, clear everything
-          handleClear();
-        }
-      } else if (e.ctrlKey || e.metaKey) {
+        // Only deletes the selection; "Clear" stays an explicit toolbar action
+        if (selectedTextId || selectedShapeId) handleDeleteSelected();
+      } else if (mod) {
         if (e.key === "=" || e.key === "+") {
           e.preventDefault();
           dispatch(setZoom(Math.min(zoom + 0.1, 3)));
@@ -322,10 +300,6 @@ const Canvas = () => {
             </div>
           </div>
 
-          {/* Zoom Controls */}
-          <div className="shrink-0">
-            <ZoomControls />
-          </div>
         </div>
 
         {/* Toolbox - Mobile (Horizontal below Toolbar) */}

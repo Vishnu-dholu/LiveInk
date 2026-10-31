@@ -28,7 +28,7 @@ const LineRenderer = ({ lines, currentLine, selectedTool }) => {
       {/* Render each completed line from the Redux store */}
       {lines.map((line, index) => (
         <Line
-          key={index} //  Unique key for each line
+          key={line.id ?? index}
           points={line.points} //  Array of x, y coordinates
           stroke={line.stroke}
           strokeWidth={line.strokeWidth}

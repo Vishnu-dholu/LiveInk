@@ -1,5 +1,4 @@
 // Import Rect (rectangle shape) component from react-konva
-import { socket } from "@/lib/socket";
 import {
   resetFillColor,
   setSelectedShapeId,
@@ -90,10 +89,6 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
               dispatch(
                 updateShapeFill({ id: shape.id, fill: currentFillColor }),
               );
-              socket.emit("shape:fill", {
-                id: shape.id,
-                fill: currentFillColor,
-              });
               dispatch(resetFillColor());
             }
           },
@@ -130,10 +125,6 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
             node.scaleY(1);
 
             dispatch(updateShapeTransform({ id: shape.id, updatedShape }));
-            socket.emit("shape:update", {
-              id: shape.id,
-              updatedShape,
-            });
             dispatch(resetFillColor());
           },
 
@@ -145,7 +136,6 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
             };
 
             dispatch(updateShapeTransform({ id: shape.id, updatedShape }));
-            socket.emit("shape:update", { id: shape.id, updatedShape });
             dispatch(resetFillColor());
           },
 

@@ -41,7 +41,6 @@ const useCanvasEvent = ({
 
   const [isMouseDown, setIsMouseDown] = useState(false); //  Track if mouse is being held down
   const lastSentIndexRef = useRef(0);
-  const eraseBatchRef = useRef([]);
 
   /**
    *  Calculates the current pointer position relative to canvas,
@@ -90,7 +89,6 @@ const useCanvasEvent = ({
       dispatch(eraseAt({ x: pos.x, y: pos.y, radius }));
       dispatch(eraseShape({ x: pos.x, y: pos.y, radius }));
       dispatch(eraseText({ x: pos.x, y: pos.y, radius }));
-      eraseBatchRef.current.push({ x: pos.x, y: pos.y });
     } else if (selectedTool === "text") {
       handleAddText(pos, selectedTool);
     } else if (selectedTool === "circle") {
@@ -150,7 +148,6 @@ const useCanvasEvent = ({
       dispatch(eraseAt({ x: pos.x, y: pos.y, radius }));
       dispatch(eraseShape({ x: pos.x, y: pos.y, radius }));
       dispatch(eraseText({ x: pos.x, y: pos.y, radius }));
-      eraseBatchRef.current.push({ x: pos.x, y: pos.y });
     } else if (selectedTool === "circle" && currentShape) {
       // Calculate radius using distance formula
       const dx = pos.x - currentShape.x;
@@ -176,6 +173,7 @@ const useCanvasEvent = ({
     if (selectedTool === "pen" || selectedTool === "pencil") {
       if (currentLine.length > 0) {
         const newLine = {
+          id: uuidv4(),
           points: [...currentLine],
           tool: selectedTool,
           stroke: selectedTool === "pen" ? "black" : "#353839",
@@ -184,9 +182,8 @@ const useCanvasEvent = ({
           dash: selectedTool === "pencil" ? [5, 5] : [],
           socketId: socket.id,
         };
+        // addLine is synced to other users as a delta by the store middleware
         dispatch(addLine(newLine));
-        const payload = encode("DrawFinal", newLine);
-        if (payload) socket.emit("draw", payload);
         dispatch(updateCurrentLine([])); // Reset for next stroke
       }
     } else if (["square", "rectangle", "circle"].includes(selectedTool)) {
@@ -201,17 +198,8 @@ const useCanvasEvent = ({
           socketId: socket.id,
         };
         dispatch(drawShape(shapeWithTool));
-        const payload = encode("ShapeFinal", shapeWithTool);
-        if (payload) socket.emit("drawShape", payload);
         dispatch(clearCurrentShape());
         dispatch(resetFillColor());
-      }
-    } else if (selectedTool === "eraser") {
-      if (eraseBatchRef.current.length > 0) {
-        const radius = 20 / zoom;
-        const payload = encode("EraseBatch", { points: eraseBatchRef.current, radius });
-        if (payload) socket.emit("erase", payload);
-        eraseBatchRef.current = [];
       }
     }
   };
