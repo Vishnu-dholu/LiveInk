@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import drawingReducer from "./drawingSlice";
 import { socket } from "../lib/socket";
 import { diffCanvas } from "../lib/canvasDiff";
+import { PREF_KEYS, savePrefs } from "../lib/prefs";
 
 // Actions that apply changes received from the server; they must never be echoed back
 const REMOTE_ACTIONS = new Set(["drawing/applyRemoteOps", "drawing/syncState"]);
@@ -23,7 +24,8 @@ const canvasSyncMiddleware = (storeApi) => (next) => (action) => {
     REMOTE_ACTIONS.has(action.type) ||
     (before.lines === after.lines &&
       before.shapes === after.shapes &&
-      before.texts === after.texts)
+      before.texts === after.texts &&
+      before.background === after.background)
   ) {
     return result;
   }
@@ -41,4 +43,18 @@ export const store = configureStore({
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(canvasSyncMiddleware),
+});
+
+// Remember drawing defaults (stroke, colours, fonts) per browser
+let lastSavedPrefs = "";
+store.subscribe(() => {
+  const state = store.getState().drawing;
+  const prefs = {};
+  for (const key of PREF_KEYS) prefs[key] = state[key];
+
+  const serialized = JSON.stringify(prefs);
+  if (serialized !== lastSavedPrefs) {
+    lastSavedPrefs = serialized;
+    savePrefs(prefs);
+  }
 });

@@ -7,6 +7,7 @@ const KEYS = Object.values(KIND_KEYS);
 export const MAX_OPS_PER_BATCH = 500;
 const MAX_ITEMS_PER_KIND = 20000;
 const MAX_ID_LENGTH = 100;
+const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
 const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 
 const isPlainObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
@@ -25,8 +26,12 @@ function cleanObject(obj) {
  * so ops resolve in O(1).
  */
 export function createCanvas(raw) {
-  const canvas = { lines: new Map(), shapes: new Map(), texts: new Map() };
+  const canvas = { lines: new Map(), shapes: new Map(), texts: new Map(), background: null };
   if (!isPlainObject(raw)) return canvas;
+
+  if (typeof raw.background === "string" && COLOR_RE.test(raw.background)) {
+    canvas.background = raw.background;
+  }
 
   for (const key of KEYS) {
     if (!Array.isArray(raw[key])) continue;
@@ -45,6 +50,7 @@ export function serializeCanvas(canvas) {
     lines: [...canvas.lines.values()],
     shapes: [...canvas.shapes.values()],
     texts: [...canvas.texts.values()],
+    background: canvas.background,
   };
 }
 
@@ -65,6 +71,13 @@ export function applyOps(canvas, ops) {
       continue;
     }
 
+    if (op.op === "background") {
+      if (op.value !== null && !(typeof op.value === "string" && COLOR_RE.test(op.value))) continue;
+      canvas.background = op.value;
+      applied.push({ op: "background", value: op.value });
+      continue;
+    }
+
     const key = KIND_KEYS[op.kind];
     if (!key) continue;
     const items = canvas[key];
@@ -81,6 +94,17 @@ export function applyOps(canvas, ops) {
       const { id: _ignored, ...patch } = cleanObject(op.patch);
       Object.assign(target, patch);
       applied.push({ op: "update", kind: op.kind, id: op.id, patch });
+    } else if (op.op === "order") {
+      // Full list of ids in the new z-order (back to front); unknown ids are ignored
+      // and items not mentioned keep their relative order at the end
+      if (!Array.isArray(op.ids) || op.ids.length > MAX_ITEMS_PER_KIND) continue;
+      const ordered = new Map();
+      for (const id of op.ids) {
+        if (typeof id === "string" && items.has(id) && !ordered.has(id)) ordered.set(id, items.get(id));
+      }
+      for (const [id, item] of items) if (!ordered.has(id)) ordered.set(id, item);
+      canvas[key] = ordered;
+      applied.push({ op: "order", kind: op.kind, ids: [...ordered.keys()] });
     } else if (op.op === "remove") {
       if (isValidId(op.id) && items.delete(op.id)) {
         applied.push({ op: "remove", kind: op.kind, id: op.id });

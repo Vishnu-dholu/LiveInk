@@ -5,11 +5,21 @@ import ChatPanel from "./ChatPanel";
 import { MessageCircle, Sliders, Users } from "lucide-react";
 import { useParams } from "react-router-dom";
 import { socket } from "@/lib/socket";
+import { useSelector } from "react-redux";
 
 const RightPanelTabs = ({ selectedTool, initialHistory = [] }) => {
   const [activeTab, setActiveTab] = useState("chat");
   const [messages, setMessages] = useState(initialHistory);
   const { roomId } = useParams();
+  const hasSelection = useSelector(
+    (state) =>
+      !!(state.drawing.selectedLineId || state.drawing.selectedShapeId || state.drawing.selectedTextId),
+  );
+
+  // Selecting something on the canvas jumps to its properties
+  useEffect(() => {
+    if (hasSelection) setActiveTab("property");
+  }, [hasSelection]);
 
   useEffect(() => {
     setMessages(initialHistory);

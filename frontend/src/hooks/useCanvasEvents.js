@@ -11,8 +11,6 @@ import {
   eraseText,
   updateCurrentShape,
   clearCurrentShape,
-  setSelectedTool,
-  resetFillColor,
 } from "@/store/drawingSlice";
 import { socket } from "@/lib/socket";
 import { encode } from "@/proto/codec";
@@ -38,6 +36,9 @@ const useCanvasEvent = ({
     (state) => state.drawing.currentStrokeWidth,
   );
   const zoom = useSelector((state) => state.drawing.zoom);
+  const strokeColor = useSelector((state) => state.drawing.currentStrokeColor);
+  const opacity = useSelector((state) => state.drawing.currentOpacity);
+  const dashStyle = useSelector((state) => state.drawing.currentDashStyle);
 
   const [isMouseDown, setIsMouseDown] = useState(false); //  Track if mouse is being held down
   const lastSentIndexRef = useRef(0);
@@ -176,10 +177,10 @@ const useCanvasEvent = ({
           id: uuidv4(),
           points: [...currentLine],
           tool: selectedTool,
-          stroke: selectedTool === "pen" ? "black" : "#353839",
+          stroke: strokeColor,
           strokeWidth: currentStrokeWidth,
-          opacity: selectedTool === "pen" ? 1 : 0.6,
-          dash: selectedTool === "pencil" ? [5, 5] : [],
+          opacity,
+          dashStyle,
           socketId: socket.id,
         };
         // addLine is synced to other users as a delta by the store middleware
@@ -194,12 +195,15 @@ const useCanvasEvent = ({
           id: uuidv4(),
           tool: selectedTool,
           fill: currentFillColor,
+          stroke: strokeColor,
+          strokeWidth: currentStrokeWidth,
+          opacity,
+          dashStyle,
           type: selectedTool === "circle" ? "circle" : (selectedTool === "square" ? "square" : "rect"),
           socketId: socket.id,
         };
         dispatch(drawShape(shapeWithTool));
         dispatch(clearCurrentShape());
-        dispatch(resetFillColor());
       }
     }
   };

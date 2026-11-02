@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch, useSelector, shallowEqual } from "react-redux";
 import {
   updateTextContent,
   addText,
@@ -16,9 +16,12 @@ const useTextEditing = (stageRef, socket) => {
 
   // Selects the text array from global Redux state
   const texts = useSelector((state) => state.drawing.texts);
-  const currentFillColor = useSelector(
-    (state) => state.drawing.currentFillColor,
-  );
+  const defaults = useSelector((state) => ({
+    color: state.drawing.currentTextColor,
+    fontSize: state.drawing.fontSize,
+    fontFamily: state.drawing.fontFamily,
+    fontStyle: state.drawing.fontStyle,
+  }), shallowEqual);
 
   // Local UI states for text editing
   const [isEditingText, setIsEditingText] = useState(false);
@@ -199,18 +202,16 @@ const useTextEditing = (stageRef, socket) => {
       });
 
       if (selectedTool === "text" && !clickedOnText) {
-        const fill = currentFillColor === "transparent" ? "black" : (currentFillColor || "black");
-
         const newText = {
           id: uuidv4(),
           x: pointerPos.x,
           y: pointerPos.y,
           text: "Type here...",
-          fontSize: 17,
+          fontSize: defaults.fontSize,
           draggable: true,
-          fill: fill,
-          fontStyle: "normal",
-          fontFamily: "Arial",
+          fill: defaults.color,
+          fontStyle: defaults.fontStyle,
+          fontFamily: defaults.fontFamily,
         };
 
         // Add to Redux immediately — text is now in texts[]
@@ -222,7 +223,7 @@ const useTextEditing = (stageRef, socket) => {
         }, 80);
       }
     },
-    [isEditingText, texts, currentFillColor, dispatch, socket, openTextEditor],
+    [isEditingText, texts, defaults, dispatch, openTextEditor],
   );
 
   /**

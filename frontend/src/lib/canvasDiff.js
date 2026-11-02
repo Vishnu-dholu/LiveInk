@@ -37,12 +37,27 @@ function itemPatch(prev, next) {
   return patch;
 }
 
+function sameOrder(a, b) {
+  return a.length === b.length && a.every((v, i) => v === b[i]);
+}
+
 export function diffCanvas(prev, next) {
   const hadItems = KINDS.some(([, key]) => prev[key].length > 0);
   const hasItems = KINDS.some(([, key]) => next[key].length > 0);
-  if (hadItems && !hasItems) return [{ op: "clear" }];
-
   const ops = [];
+  if (hadItems && !hasItems) {
+    ops.push({ op: "clear" });
+  } else {
+    diffItems(prev, next, ops);
+  }
+
+  if (prev.background !== next.background) {
+    ops.push({ op: "background", value: next.background ?? null });
+  }
+  return ops;
+}
+
+function diffItems(prev, next, ops) {
   for (const [kind, key] of KINDS) {
     const before = prev[key];
     const after = next[key];
@@ -65,6 +80,12 @@ export function diffCanvas(prev, next) {
     for (const item of before) {
       if (!afterIds.has(item.id)) ops.push({ op: "remove", kind, id: item.id });
     }
+
+    // Z-order changed among the items that exist on both sides: send the full order
+    const commonBefore = before.filter((i) => afterIds.has(i.id)).map((i) => i.id);
+    const commonAfter = after.filter((i) => beforeById.has(i.id)).map((i) => i.id);
+    if (!sameOrder(commonBefore, commonAfter)) {
+      ops.push({ op: "order", kind, ids: after.map((i) => i.id) });
+    }
   }
-  return ops;
 }

@@ -15,6 +15,7 @@ import {
   clearCanvas,
   deleteText,
   deleteShape,
+  deleteLine,
   setStagePosition,
   setZoom,
   setSelectedTool,
@@ -61,6 +62,7 @@ const Canvas = () => {
 
   const selectedTextId = useSelector((state) => state.drawing.selectedTextId);
   const selectedShapeId = useSelector((state) => state.drawing.selectedShapeId);
+  const selectedLineId = useSelector((state) => state.drawing.selectedLineId);
 
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false); // Manage color picker
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -187,8 +189,10 @@ const Canvas = () => {
       dispatch(deleteText(selectedTextId));
     } else if (selectedShapeId) {
       dispatch(deleteShape(selectedShapeId));
+    } else if (selectedLineId) {
+      dispatch(deleteLine(selectedLineId));
     }
-  }, [dispatch, selectedTextId, selectedShapeId]);
+  }, [dispatch, selectedTextId, selectedShapeId, selectedLineId]);
 
   // Keyboard Shortcuts
   useEffect(() => {
@@ -214,7 +218,7 @@ const Canvas = () => {
         handleRedo();
       } else if (e.key === "Delete") {
         // Only deletes the selection; "Clear" stays an explicit toolbar action
-        if (selectedTextId || selectedShapeId) handleDeleteSelected();
+        if (selectedTextId || selectedShapeId || selectedLineId) handleDeleteSelected();
       } else if (mod) {
         if (e.key === "=" || e.key === "+") {
           e.preventDefault();
@@ -238,6 +242,7 @@ const Canvas = () => {
     handleDeleteSelected,
     selectedTextId,
     selectedShapeId,
+    selectedLineId,
     zoom,
     dispatch,
   ]);
@@ -294,7 +299,7 @@ const Canvas = () => {
                 onRedo={handleRedo}
                 onClear={handleClear}
                 onDeleteSelected={handleDeleteSelected}
-                hasSelection={!!(selectedTextId || selectedShapeId)}
+                hasSelection={!!(selectedTextId || selectedShapeId || selectedLineId)}
                 stageRef={stageRef}
               />
             </div>

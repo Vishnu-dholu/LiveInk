@@ -2,7 +2,6 @@
 import {
   setSelectedTextId,
   updateTextFill,
-  resetFillColor,
 } from "@/store/drawingSlice";
 import { Text } from "react-konva";
 import { useDispatch, useSelector } from "react-redux";
@@ -47,7 +46,6 @@ const TextRenderer = ({ isEditingText, editTextProps, onEdit }) => {
     if (selectedTool === "paint") {
       // Direct click-to-fill (same pattern as ShapeRenderer)
       dispatch(updateTextFill({ id: t.id, fill: currentFillColor }));
-      dispatch(resetFillColor());
     } else {
       dispatch(setSelectedTextId(t.id));
     }
@@ -70,6 +68,7 @@ const TextRenderer = ({ isEditingText, editTextProps, onEdit }) => {
             fontStyle={t.fontStyle || "normal"}
             fontFamily={t.fontFamily || "Arial"}
             fill={t.fill || "black"}
+            opacity={t.opacity ?? 1}
             width={t.width || undefined}
             draggable={selectedTool === "select"}
             onClick={() => handleTextClick(t)}

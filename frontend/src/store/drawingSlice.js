@@ -1,4 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { v4 as uuidv4 } from "uuid";
+import { loadPrefs } from "../lib/prefs";
 
 const initialState = {
   lines: [], //  Stores drawn lines
@@ -10,6 +12,7 @@ const initialState = {
   currentShape: null, //  Temporarily holds shape being drawn
   selectedShapeId: null, //  ID of currently selected shape
   selectedTextId: null,
+  selectedLineId: null,
   zoom: 1, //  Current zoom level
   stageX: 0, //  X scroll position of canvas
   stageY: 0, //  Y scroll position of canvas
@@ -25,8 +28,43 @@ const initialState = {
   roomId: null,
   createdBy: "",
   users: [],
-  // chatHistory: [],
+  background: null, // shared canvas colour (null = theme default)
+  // Defaults applied to newly drawn items (remembered per browser)
+  currentStrokeColor: "#000000",
+  currentTextColor: "#000000",
+  currentOpacity: 1,
+  currentDashStyle: "solid",
+  recentColors: [],
+  propEditKey: null, // groups a slider/colour drag into one undo step
+  ...loadPrefs(),
 };
+
+const ITEM_KEYS = { line: "lines", shape: "shapes", text: "texts" };
+const SELECTION_FIELD = {
+  line: "selectedLineId",
+  shape: "selectedShapeId",
+  text: "selectedTextId",
+};
+
+// Selecting one kind of item deselects the others
+function select(state, kind, id) {
+  for (const [k, field] of Object.entries(SELECTION_FIELD)) {
+    state[field] = k === kind ? id : null;
+  }
+}
+
+// Drops selections whose item no longer exists (after undo, redo, remote deletes...)
+function fixSelection(state) {
+  if (state.selectedLineId && !state.lines.some((i) => i.id === state.selectedLineId)) {
+    state.selectedLineId = null;
+  }
+  if (state.selectedShapeId && !state.shapes.some((i) => i.id === state.selectedShapeId)) {
+    state.selectedShapeId = null;
+  }
+  if (state.selectedTextId && !state.texts.some((i) => i.id === state.selectedTextId)) {
+    state.selectedTextId = null;
+  }
+}
 
 const drawingSlice = createSlice({
   name: "drawing",
@@ -108,6 +146,8 @@ const drawingSlice = createSlice({
         const prevState = state.undoHistory.pop(); //  Get previous snapshot
         state.redoHistory.push(getSnapshot(state)); //  Save current for redo
         restoreSnapshot(state, prevState); //  Restore to previous
+        state.propEditKey = null;
+        fixSelection(state);
       }
     },
 
@@ -117,6 +157,8 @@ const drawingSlice = createSlice({
         const redoState = state.redoHistory.pop(); //  Get next state
         pushUndo(state); //  Save current for undo
         restoreSnapshot(state, redoState); //  Restore redo state
+        state.propEditKey = null;
+        fixSelection(state);
       }
     },
 
@@ -127,6 +169,7 @@ const drawingSlice = createSlice({
       state.lines = [];
       state.shapes = [];
       state.texts = [];
+      fixSelection(state);
     },
 
     // Syncs the entire canvas from the server (for undo/redo and late joiners)
@@ -134,6 +177,8 @@ const drawingSlice = createSlice({
       state.lines = action.payload.lines || [];
       state.shapes = action.payload.shapes || [];
       state.texts = action.payload.texts || [];
+      state.background = action.payload.background || null;
+      fixSelection(state);
       state.undoHistory = [];
       state.redoHistory = [];
     },
@@ -146,6 +191,10 @@ const drawingSlice = createSlice({
           state.lines = [];
           state.shapes = [];
           state.texts = [];
+          continue;
+        }
+        if (op.op === "background") {
+          state.background = op.value || null;
           continue;
         }
 
@@ -166,17 +215,17 @@ const drawingSlice = createSlice({
         } else if (op.op === "update") {
           const target = state[key].find((i) => i.id === op.id);
           if (target) Object.assign(target, op.patch);
+        } else if (op.op === "order") {
+          const rank = new Map(op.ids.map((id, i) => [id, i]));
+          state[key] = [...state[key]].sort(
+            (a, b) => (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity),
+          );
         } else if (op.op === "remove") {
           state[key] = state[key].filter((i) => i.id !== op.id);
         }
       }
 
-      if (state.selectedShapeId && !state.shapes.some((s) => s.id === state.selectedShapeId)) {
-        state.selectedShapeId = null;
-      }
-      if (state.selectedTextId && !state.texts.some((t) => t.id === state.selectedTextId)) {
-        state.selectedTextId = null;
-      }
+      fixSelection(state);
     },
 
     // ----- ERASER OVERHAUL -----
@@ -236,7 +285,10 @@ const drawingSlice = createSlice({
         flush();
       }
 
-      if (changed) state.lines = newLines;
+      if (changed) {
+        state.lines = newLines;
+        fixSelection(state);
+      }
     },
 
     eraseShape: (state, action) => {
@@ -293,7 +345,8 @@ const drawingSlice = createSlice({
     },
 
     setSelectedTextId: (state, action) => {
-      state.selectedTextId = action.payload;
+      if (action.payload) select(state, "text", action.payload);
+      else state.selectedTextId = null;
     },
 
     // Updates the content of a specific text element
@@ -359,6 +412,14 @@ const drawingSlice = createSlice({
 
     setSelectedTool: (state, action) => {
       state.selectedTool = action.payload;
+      // Pencil defaults to a light dashed stroke, pen to a solid one
+      if (action.payload === "pencil") {
+        state.currentDashStyle = "dashed";
+        state.currentOpacity = 0.6;
+      } else if (action.payload === "pen") {
+        state.currentDashStyle = "solid";
+        state.currentOpacity = 1;
+      }
     },
 
     setFontFamily: (state, action) => {
@@ -412,7 +473,98 @@ const drawingSlice = createSlice({
     // ------- SHAPE TRANSFORM -------
     // Sets the currently selected shape (used for transforms)
     setSelectedShapeId: (state, action) => {
-      state.selectedShapeId = action.payload;
+      if (action.payload) select(state, "shape", action.payload);
+      else state.selectedShapeId = null;
+    },
+
+    clearSelection: (state) => {
+      state.selectedLineId = null;
+      state.selectedShapeId = null;
+      state.selectedTextId = null;
+    },
+
+    setSelectedLineId: (state, action) => {
+      if (action.payload) select(state, "line", action.payload);
+      else state.selectedLineId = null;
+    },
+
+    deleteLine: (state, action) => {
+      const id = action.payload;
+      pushUndo(state);
+      state.lines = state.lines.filter((l) => l.id !== id);
+      if (state.selectedLineId === id) state.selectedLineId = null;
+      state.redoHistory = [];
+    },
+
+    // ------- PROPERTIES PANEL -------
+    // Edits properties of one line / shape / text. Pass coalesceKey while dragging a
+    // slider or colour so the whole drag becomes a single undo step.
+    updateItemProps: (state, action) => {
+      const { kind, id, patch, coalesceKey } = action.payload;
+      const key = ITEM_KEYS[kind];
+      const target = key && state[key].find((i) => i.id === id);
+      if (!target) return;
+
+      if (!(coalesceKey && state.propEditKey === coalesceKey)) pushUndo(state);
+      state.propEditKey = coalesceKey || null;
+      Object.assign(target, patch);
+      state.redoHistory = [];
+    },
+
+    // Z-order within a kind: front | back | forward | backward
+    reorderItem: (state, action) => {
+      const { kind, id, to } = action.payload;
+      const key = ITEM_KEYS[kind];
+      const list = key && state[key];
+      const index = list ? list.findIndex((i) => i.id === id) : -1;
+      if (index === -1) return;
+
+      const target = { front: list.length - 1, back: 0, forward: index + 1, backward: index - 1 }[to];
+      if (target === undefined || target < 0 || target >= list.length || target === index) return;
+
+      pushUndo(state);
+      const [item] = list.splice(index, 1);
+      list.splice(target, 0, item);
+      state.redoHistory = [];
+    },
+
+    duplicateItem: {
+      reducer: (state, action) => {
+        const { kind, id, newId } = action.payload;
+        const key = ITEM_KEYS[kind];
+        const source = key && state[key].find((i) => i.id === id);
+        if (!source) return;
+
+        pushUndo(state);
+        const OFFSET = 20;
+        const copy = { ...JSON.parse(JSON.stringify(source)), id: newId };
+        delete copy.socketId; // not a live stroke of anyone
+        if (kind === "line") {
+          copy.points = copy.points.map((p) => p + OFFSET);
+        } else {
+          copy.x += OFFSET;
+          copy.y += OFFSET;
+        }
+        state[key].push(copy);
+        state.redoHistory = [];
+        select(state, kind, newId);
+      },
+      prepare: ({ kind, id }) => ({ payload: { kind, id, newId: uuidv4() } }),
+    },
+
+    // Defaults for new items (stroke colour/width/opacity/dash, text colour, fonts)
+    setDrawingDefaults: (state, action) => {
+      Object.assign(state, action.payload);
+    },
+
+    addRecentColor: (state, action) => {
+      const color = String(action.payload).toLowerCase();
+      state.recentColors = [color, ...state.recentColors.filter((c) => c !== color)].slice(0, 8);
+    },
+
+    // Shared canvas colour (null resets to the theme default)
+    setBackground: (state, action) => {
+      state.background = action.payload || null;
     },
 
     // Updates transformation (position/scale/rotation) of a shape by ID
@@ -502,6 +654,7 @@ const REMOTE_KEYS = { line: "lines", shape: "shapes", text: "texts" };
 
 // Saves the current drawable state for undo, keeping the history bounded
 function pushUndo(state) {
+  state.propEditKey = null;
   state.undoHistory.push(getSnapshot(state));
   if (state.undoHistory.length > MAX_UNDO_STEPS) state.undoHistory.shift();
 }
@@ -512,11 +665,11 @@ function getSnapshot(state) {
     lines: state.lines.map((line) => ({
       ...line,
       points: [...line.points],
-      dash: [...(line.dash || [])],
+      ...(line.dash && { dash: [...line.dash] }),
     })),
     shapes: state.shapes.map((shape) => ({
       ...shape,
-      dash: [...(shape.dash || [])],
+      ...(shape.dash && { dash: [...shape.dash] }),
     })),
     texts: state.texts.map((text) => ({ ...text })),
   };
@@ -559,6 +712,15 @@ export const {
   setFontFamily,
   setFontStyle,
   setSelectedShapeId,
+  setSelectedLineId,
+  clearSelection,
+  deleteLine,
+  updateItemProps,
+  reorderItem,
+  duplicateItem,
+  setDrawingDefaults,
+  addRecentColor,
+  setBackground,
   updateShapeTransform,
   updateShapePosition,
   updateTextPosition,

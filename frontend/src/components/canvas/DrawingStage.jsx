@@ -57,6 +57,7 @@ const DrawingStage = ({
     useCanvasEvents({ selectedTool, stageRef, isEditingText, handleAddText });
 
   const showGrid = useSelector((state) => state.drawing.showGrid);
+  const background = useSelector((state) => state.drawing.background);
   const stageX = useSelector((state) => state.drawing.stageX);
   const stageY = useSelector((state) => state.drawing.stageY);
 
@@ -117,7 +118,11 @@ const DrawingStage = ({
       draggable={isPanning}
       onDragEnd={handleDragEnd}
       onWheel={handleWheel}
-      style={{ borderRadius: "12px", cursor: isPanning ? "grab" : "crosshair" }}
+      style={{
+        borderRadius: "12px",
+        cursor: isPanning ? "grab" : "crosshair",
+        ...(background && { backgroundColor: background }),
+      }}
       onMouseDown={!isPanning ? handleMouseDown : undefined} //  Start drawing (line or shape)
       onMouseMove={!isPanning ? handleMouseMove : undefined} //  Draw as the mouse moves
       onMouseUp={!isPanning ? handleMouseUp : undefined} //  Complete the drawing action
@@ -136,7 +141,6 @@ const DrawingStage = ({
           shapes={shapes}
           currentShape={currentShape}
           selectedTool={selectedTool}
-          zoom={zoom}
         />
 
         {/* Render static text elements and handle live editing */}

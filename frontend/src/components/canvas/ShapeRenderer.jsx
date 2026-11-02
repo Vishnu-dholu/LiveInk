@@ -1,11 +1,12 @@
 // Import Rect (rectangle shape) component from react-konva
 import {
-  resetFillColor,
+  clearSelection,
   setSelectedShapeId,
   updateShapeFill,
   updateShapeTransform,
 } from "@/store/drawingSlice";
 import { useEffect, useRef } from "react";
+import { dashFor } from "@/lib/strokeStyle";
 import { Rect, Circle, Transformer, Line } from "react-konva";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -13,7 +14,7 @@ import { useDispatch, useSelector } from "react-redux";
  * ShapeRenderer is responsible for rendering all static shapes
  * (like reactangles) as well as a live preview of the currently being drawn.
  */
-const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
+const ShapeRenderer = ({ shapes, currentShape, selectedTool }) => {
   const dispatch = useDispatch();
 
   //  Get all finalized shapes from Redux store
@@ -49,7 +50,7 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
-        dispatch(setSelectedShapeId(null));
+        dispatch(clearSelection());
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -68,7 +69,7 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
         listening={true}
         onMouseDown={() => {
           if (selectedTool === "select") {
-            dispatch(setSelectedShapeId(null));
+            dispatch(clearSelection());
           }
         }}
       />
@@ -77,8 +78,11 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
         const commonProps = {
           x: shape.x,
           y: shape.y,
-          stroke: "black",
-          strokeWidth: 2,
+          stroke: shape.stroke || "black",
+          strokeWidth: shape.strokeWidth || 2,
+          opacity: shape.opacity ?? 1,
+          dash: dashFor(shape.dashStyle, shape.strokeWidth || 2),
+          rotation: shape.rotation || 0,
           fill: shape.fill || "transparent",
           draggable: selectedTool === "select",
 
@@ -89,8 +93,7 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
               dispatch(
                 updateShapeFill({ id: shape.id, fill: currentFillColor }),
               );
-              dispatch(resetFillColor());
-            }
+              }
           },
 
           onTransformEnd: (e) => {
@@ -105,18 +108,18 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
               const avgScale = (scaleX + scaleY) / 2;
               updatedShape = {
                 ...shape,
-                x: node.x() / zoom,
-                y: node.y() / zoom,
-                radius: ((shape.radius || 1) * avgScale) / zoom,
+                x: node.x(),
+                y: node.y(),
+                radius: (shape.radius || 1) * avgScale,
                 rotation,
               };
             } else {
               updatedShape = {
                 ...shape,
-                x: node.x() / zoom,
-                y: node.y() / zoom,
-                width: (shape.width * scaleX) / zoom,
-                height: (shape.height * scaleY) / zoom,
+                x: node.x(),
+                y: node.y(),
+                width: shape.width * scaleX,
+                height: shape.height * scaleY,
                 rotation,
               };
             }
@@ -125,18 +128,16 @@ const ShapeRenderer = ({ shapes, currentShape, selectedTool, zoom }) => {
             node.scaleY(1);
 
             dispatch(updateShapeTransform({ id: shape.id, updatedShape }));
-            dispatch(resetFillColor());
           },
 
           onDragEnd: (e) => {
             const updatedShape = {
               ...shape,
-              x: e.target.x() / zoom,
-              y: e.target.y() / zoom,
+              x: e.target.x(),
+              y: e.target.y(),
             };
 
             dispatch(updateShapeTransform({ id: shape.id, updatedShape }));
-            dispatch(resetFillColor());
           },
 
           ref: (el) => {
